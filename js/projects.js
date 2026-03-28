@@ -12,7 +12,12 @@ export const PROJECTS = [
     bgColorTop:    "#0a0e2e",
     bgColorBottom: "#0d2a4a",
     glowColor:     "#00aaff",
-    images: [],
+    media: [
+      "https://picsum.photos/seed/alpha1/640/360",
+      "https://picsum.photos/seed/alpha2/640/360",
+      "https://www.w3schools.com/html/mov_bbb.mp4",
+      "https://picsum.photos/seed/alpha3/640/360"
+    ],
     link: "#"
   },
   {
@@ -24,7 +29,11 @@ export const PROJECTS = [
     bgColorTop:    "#1a0a2e",
     bgColorBottom: "#2a0a3a",
     glowColor:     "#cc44ff",
-    images: [],
+    media: [
+      "https://picsum.photos/seed/beta1/640/360",
+      "https://picsum.photos/seed/beta2/640/360",
+      "https://picsum.photos/seed/beta3/640/360"
+    ],
     link: "#"
   },
   {
@@ -36,7 +45,10 @@ export const PROJECTS = [
     bgColorTop:    "#041a10",
     bgColorBottom: "#072a18",
     glowColor:     "#00ff88",
-    images: [],
+    media: [
+      "https://picsum.photos/seed/gamma1/640/360",
+      "https://www.w3schools.com/html/mov_bbb.mp4"
+    ],
     link: "#"
   },
   {
@@ -48,7 +60,12 @@ export const PROJECTS = [
     bgColorTop:    "#2a0a04",
     bgColorBottom: "#3a1004",
     glowColor:     "#ff4400",
-    images: [],
+    media: [
+      "https://picsum.photos/seed/delta1/640/360",
+      "https://picsum.photos/seed/delta2/640/360",
+      "https://picsum.photos/seed/delta3/640/360",
+      "https://picsum.photos/seed/delta4/640/360"
+    ],
     link: "#"
   },
   {
@@ -60,7 +77,10 @@ export const PROJECTS = [
     bgColorTop:    "#1a1400",
     bgColorBottom: "#2a2000",
     glowColor:     "#ffcc00",
-    images: [],
+    media: [
+      "https://picsum.photos/seed/eps1/640/360",
+      "https://picsum.photos/seed/eps2/640/360"
+    ],
     link: "#"
   },
   {
@@ -72,7 +92,11 @@ export const PROJECTS = [
     bgColorTop:    "#001a14",
     bgColorBottom: "#002a20",
     glowColor:     "#00ffcc",
-    images: [],
+    media: [
+      "https://picsum.photos/seed/zeta1/640/360",
+      "https://picsum.photos/seed/zeta2/640/360",
+      "https://picsum.photos/seed/zeta3/640/360"
+    ],
     link: "#"
   }
 ];
