@@ -236,8 +236,6 @@ body.hovering  { cursor: pointer;  }
   background: rgba(0,0,0,0.55);
   border: 1px solid rgba(255,255,255,0.18);
   color: rgba(255,255,255,0.85);
-  font-size: 1.9rem;
-  line-height: 1;
   width: 2.4rem;
   height: 2.4rem;
   display: flex;
@@ -247,7 +245,6 @@ body.hovering  { cursor: pointer;  }
   border-radius: 2px;
   transition: background 0.2s, border-color 0.2s, color 0.2s;
   z-index: 2;
-  font-family: inherit;
   padding: 0;
 }
 .carousel-btn:hover {
