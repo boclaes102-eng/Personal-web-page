@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portfolio — Deep Space</title>
+
+  <!-- Import map must come before any module script -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three":          "https://unpkg.com/three@0.160.1/build/three.module.js",
+      "three/addons/":  "https://unpkg.com/three@0.160.1/examples/jsm/"
+    }
+  }
+  </script>
+
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- ── Canvas ─────────────────────────────────────────── -->
+  <canvas id="canvas"></canvas>
+
+  <!-- ── Loading screen ─────────────────────────────────── -->
+  <div id="loading">
+    <div class="loading-title">DEEP SPACE</div>
+    <div class="loading-bar-wrap">
+      <div class="loading-bar"></div>
+    </div>
+    <div class="loading-label">LOADING ENVIRONMENT</div>
+  </div>
+
+  <!-- ── Header ─────────────────────────────────────────── -->
+  <div id="header">
+    <!-- Edit "YOUR NAME" below -->
+    <div class="site-name">YOUR NAME</div>
+    <div class="hint">DRAG TO LOOK &nbsp;·&nbsp; CLICK A PROJECT</div>
+  </div>
+
+  <!-- ── Project detail overlay ─────────────────────────── -->
+  <div id="overlay">
+    <div class="overlay-backdrop"></div>
+    <div class="overlay-panel">
+      <button class="overlay-close">ESC / CLOSE</button>
+      <h2 class="overlay-title"></h2>
+      <p  class="overlay-desc"></p>
+      <div class="overlay-tech"></div>
+      <div class="overlay-images"></div>
+      <a  class="overlay-link" href="#" target="_blank" rel="noopener">VIEW PROJECT</a>
+    </div>
+  </div>
+
+  <!-- ── Lore panel (celestial easter egg) ─────────────────── -->
+  <div id="lore-panel">
+    <button class="lore-close">ESC / BACK</button>
+    <div class="lore-tag"></div>
+    <h2 class="lore-name"></h2>
+    <div class="lore-class"></div>
+    <hr class="lore-divider" />
+    <p class="lore-desc"></p>
+    <ul class="lore-stats"></ul>
+  </div>
+
+  <!-- GSAP — loaded before the module so window.gsap is ready -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+
+  <!-- Main app (ES module) -->
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
