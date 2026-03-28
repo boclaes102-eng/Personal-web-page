@@ -5,19 +5,15 @@
 export const PROJECTS = [
   {
     id: 0,
-    title: "Project Alpha",
+    computer: true,           // renders as a 3D retro CRT computer in the scene
+    title: "Password Analyzer",
     description:
-      "A full-stack web application that lets users track and visualise personal fitness goals over time. Features real-time charts, a REST API backend, and OAuth authentication.",
-    tech: ["React", "Node.js", "PostgreSQL", "Chart.js"],
-    bgColorTop:    "#0a0e2e",
-    bgColorBottom: "#0d2a4a",
-    glowColor:     "#00aaff",
-    media: [
-      "https://picsum.photos/seed/alpha1/640/360",
-      "https://picsum.photos/seed/alpha2/640/360",
-      "https://www.w3schools.com/html/mov_bbb.mp4",
-      "https://picsum.photos/seed/alpha3/640/360"
-    ],
+      "A client-side password strength analyzer. Runs entirely in the browser — entropy calculation, pattern detection, composition breakdown, and k-anonymity HIBP breach checking.",
+    tech: ["JavaScript", "SHA-1", "HIBP API", "CSS"],
+    bgColorTop:    "#001a00",
+    bgColorBottom: "#002800",
+    glowColor:     "#00ff41",
+    media: [],
     link: "#"
   },
   {

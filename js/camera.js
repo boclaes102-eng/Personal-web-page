@@ -10,6 +10,7 @@ import { shared }                              from './state.js';
 import { frames }                              from './frames.js';
 import { showOverlay, hideOverlay,
          showLore,    hideLore }               from './overlay.js';
+import { showTerminal, hideTerminal }          from './terminal.js';
 
 const { gsap } = window;
 
@@ -48,13 +49,30 @@ export function zoomIn(group) {
   document.body.classList.remove('hovering');
   shared.hoveredFrame = null;
 
-  const worldPos  = new THREE.Vector3();
-  group.getWorldPosition(worldPos);
-  const fwd       = new THREE.Vector3(0, 0, 1).applyQuaternion(group.quaternion);
-  const camTarget = worldPos.clone().addScaledVector(fwd, 3.6);
+  const isComputer = !!group.userData.isComputer;
+  const worldPos   = new THREE.Vector3();
+  // For the computer, target the screen mesh directly so the camera centers
+  // on the monitor screen rather than the midpoint of the whole setup.
+  if (isComputer && group.userData.screenMesh) {
+    group.userData.screenMesh.getWorldPosition(worldPos);
+  } else {
+    group.getWorldPosition(worldPos);
+  }
+  const fwd        = new THREE.Vector3(0, 0, 1).applyQuaternion(group.quaternion);
+  const zoomDist   = isComputer ? 2.2 : 3.6;
+  const camTarget  = worldPos.clone().addScaledVector(fwd, zoomDist);
 
   const tl = gsap.timeline({
-    onComplete: () => { cam.mode = 'zoomed'; showOverlay(group.userData.proj); },
+    onComplete: () => {
+      cam.mode = 'zoomed';
+      if (isComputer) {
+        _currentZoomType = 'computer';
+        showTerminal(() => zoomOut());
+      } else {
+        _currentZoomType = 'project';
+        showOverlay(group.userData.proj);
+      }
+    },
   });
   tl.to(cam.pos,    { x: camTarget.x, y: camTarget.y, z: camTarget.z, duration: 1.5, ease: 'power3.inOut' }, 0);
   tl.to(cam.target, { x: worldPos.x,  y: worldPos.y,  z: worldPos.z,  duration: 1.5, ease: 'power3.inOut' }, 0);
@@ -98,9 +116,19 @@ export function zoomToCelestial(target) {
 
 // ── Zoom back to freelook ─────────────────────────────────────────────────────
 export function zoomOut() {
+  if (cam.mode !== 'zoomed') return;   // guard: prevent re-entry
   cam.mode = 'transitioning';
-  if (_currentZoomType === 'celestial') { hideLore(); } else { hideOverlay(); }
 
+  if (_currentZoomType === 'computer') {
+    // CRT shutdown plays first, camera flies back after
+    hideTerminal(_doZoomOut);
+  } else {
+    if (_currentZoomType === 'celestial') hideLore(); else hideOverlay();
+    _doZoomOut();
+  }
+}
+
+function _doZoomOut() {
   const restoredTarget = new THREE.Vector3(
      Math.sin(cam.savedYaw)  * Math.cos(cam.savedPitch),
      Math.sin(cam.savedPitch),
@@ -117,8 +145,8 @@ export function zoomOut() {
       shared.hoveredFrame = null;
     },
   });
-  tl.to(cam.pos,    { x: 0, y: 0, z: 0,                                                         duration: 1.5, ease: 'power3.inOut' }, 0);
-  tl.to(cam.target, { x: restoredTarget.x, y: restoredTarget.y, z: restoredTarget.z,             duration: 1.5, ease: 'power3.inOut' }, 0);
+  tl.to(cam.pos,    { x: 0, y: 0, z: 0,                                              duration: 1.5, ease: 'power3.inOut' }, 0);
+  tl.to(cam.target, { x: restoredTarget.x, y: restoredTarget.y, z: restoredTarget.z, duration: 1.5, ease: 'power3.inOut' }, 0);
 
   frames.forEach(f => {
     gsap.to(f.userData.panelMesh.material, { opacity: 1,    duration: 0.9 });

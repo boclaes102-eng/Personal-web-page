@@ -429,3 +429,187 @@ body.hovering  { cursor: pointer;  }
 .overlay-panel::-webkit-scrollbar       { width: 3px; }
 .overlay-panel::-webkit-scrollbar-track { background: transparent; }
 .overlay-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
+
+/* ═══════════════════════════════════════════════════════════
+   CRT Terminal Overlay
+   ═══════════════════════════════════════════════════════════ */
+:root {
+  --crt-green:      #00ff41;
+  --crt-green-dim:  #00aa2b;
+  --crt-green-dark: #006618;
+  --crt-bg:         #040a04;
+}
+
+.crt-terminal {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  background: var(--crt-bg);
+  font-family: 'Courier New', Courier, monospace;
+  font-size: clamp(12px, 1.5vw, 15px);
+  line-height: 1.55;
+  color: var(--crt-green);
+  display: flex;
+  flex-direction: column;
+  transform-origin: center center;
+  overflow: hidden;
+}
+
+/* Scanlines */
+.crt-scanlines {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.13) 2px,
+    rgba(0, 0, 0, 0.13) 3px
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Vignette */
+.crt-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 55%,
+    rgba(0, 0, 0, 0.72) 100%
+  );
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Inner layout (above overlay layers) */
+.crt-inner {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0.6rem 1.2rem 0.6rem;
+}
+
+/* Top bar */
+.crt-topbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--crt-green-dark);
+  padding-bottom: 0.45rem;
+  margin-bottom: 0.5rem;
+  flex-shrink: 0;
+}
+
+.crt-title {
+  color: var(--crt-green);
+  font-weight: bold;
+  letter-spacing: 0.05em;
+}
+
+/* Blinking cursor in top bar */
+.crt-blink-cursor {
+  color: var(--crt-green);
+  animation: crt-blink 1.1s step-end infinite;
+  font-size: 1em;
+}
+@keyframes crt-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* Shared style for both terminal header buttons */
+.crt-breach-btn,
+.crt-shutdown-btn {
+  background: transparent;
+  border: 1px solid var(--crt-green-dark);
+  color: var(--crt-green-dim);
+  font-family: inherit;
+  font-size: 0.82em;
+  padding: 0.2rem 0.6rem;
+  cursor: pointer;
+  letter-spacing: 0.08em;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.crt-breach-btn {
+  margin-left: auto;
+  border-color: var(--crt-green-dark);
+}
+.crt-shutdown-btn {
+  margin-left: 0.4rem;
+}
+.crt-breach-btn:hover:not(:disabled),
+.crt-shutdown-btn:hover {
+  color: var(--crt-bg);
+  background: var(--crt-green);
+  border-color: var(--crt-green);
+}
+.crt-breach-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Scrollable output area */
+.crt-output {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 0.4rem;
+}
+.crt-output::-webkit-scrollbar       { width: 3px; }
+.crt-output::-webkit-scrollbar-track { background: transparent; }
+.crt-output::-webkit-scrollbar-thumb { background: var(--crt-green-dark); border-radius: 2px; }
+
+/* Output lines */
+.term-line {
+  white-space: pre-wrap;
+  word-break: break-word;
+  min-height: 1em;
+}
+.term-dim     { color: var(--crt-green-dim); }
+.term-success { color: var(--crt-green); text-shadow: 0 0 6px var(--crt-green); }
+.term-warn    { color: #f7d05a; }
+.term-danger  { color: #f75a5a; }
+
+/* Input row */
+.crt-input-row {
+  display: flex;
+  align-items: center;
+  border-top: 1px solid var(--crt-green-dark);
+  padding-top: 0.45rem;
+  margin-top: 0.3rem;
+  flex-shrink: 0;
+}
+
+.crt-prompt {
+  color: var(--crt-green);
+  white-space: pre;
+  flex-shrink: 0;
+  font-weight: bold;
+}
+
+.crt-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--crt-green);
+  font-family: inherit;
+  font-size: inherit;
+  caret-color: var(--crt-green);
+  /* browser renders password dots in green via color inherit */
+}
+.crt-input::placeholder {
+  color: var(--crt-green-dark);
+}
+/* Style the password masking dots to match the theme in Webkit */
+.crt-input::-webkit-credentials-auto-fill-button { display: none; }
+
+/* Responsive: smaller font on tiny screens */
+@media (max-width: 480px) {
+  .crt-inner { padding: 0.4rem 0.6rem; }
+  .crt-terminal { font-size: 11px; }
+}
