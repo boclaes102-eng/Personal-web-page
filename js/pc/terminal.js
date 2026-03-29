@@ -158,6 +158,13 @@ function getSuggestions(pw, sc, ent, pats, cm) {
 }
 
 // ── HIBP k-anonymity breach check ─────────────────────────────────────────────
+// HIBP k-anonymity model:
+//   1. SHA-1 hash the password locally (never send the plaintext).
+//   2. Send only the first 5 hex characters of the hash to the API.
+//   3. The API returns all breach-database suffixes that share that prefix (typically ~500 lines).
+//   4. Check locally whether our suffix appears — the server never learns the full hash.
+// 'Add-Padding: true' requests that the response is padded to a fixed length,
+// preventing traffic analysis from inferring which prefix was requested.
 async function hibpCheck(pw) {
   const buf    = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(pw));
   const hex    = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('').toUpperCase();
@@ -208,6 +215,12 @@ async function typeLine(text, cls = '', charDelay = 14) {
 
 // ── Boot sequence ─────────────────────────────────────────────────────────────
 async function runBoot() {
+  // Each entry: t = text, d = per-character delay in ms (overrides default 12ms).
+  // Lines without d use the default 12ms/char — quick BIOS output.
+  // d: 16 on the "Loading" line makes it feel like the program is actually loading.
+  // d: 5 on the progress bar races through quickly for satisfying visual feedback.
+  // d: 4 on the box border lines draws them fast but distinctly.
+  // Empty strings print a blank line; sleep(55) adds a pause between sections.
   const lines = [
     { t: 'BIOS v2.1.0  (C)1991 Phoenix Technologies' },
     { t: 'Memory Test: 640K OK' },
@@ -246,6 +259,8 @@ function showAnalysis(pw) {
 
   _output.innerHTML = '';
   printLine();
+  // Score bar: w=22 chars — wide enough to show fine-grained progress visually.
+  // Composition bars (w=14) are narrower to fit alongside the count labels.
   printLine(`  SCORE    [${bar(sc, 100, 22)}]  ${sc}/100`);
   printLine(`  STRENGTH  ${slabel}`, scls);
   printLine();
@@ -297,6 +312,8 @@ async function runHibpCheck() {
 
   printLine();
   printLine('  ── HIBP BREACH CHECK ─────────────────────────', 'dim');
+  // Show first 2 characters so the user can confirm the right password is being checked,
+  // then mask the rest with asterisks — never displays the full password in the output.
   printLine(`  Sending prefix hash for "${pw.slice(0,2)}${'*'.repeat(Math.max(0, pw.length-2))}"...`, 'dim');
 
   try {

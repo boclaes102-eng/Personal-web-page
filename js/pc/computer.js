@@ -210,21 +210,26 @@ export function buildComputer(proj) {
   glowPlane.position.set(0, SCR_Y, MON_Z + MON_D/2 + 0.11);
   group.add(glowPlane);
 
-  // A6 — ventilation slots on monitor TOP (5 thin horizontal bars)
+  // A6 — ventilation slots on monitor TOP: 5 horizontal bars, each 55% of monitor width.
+  // Offset 0.2 to the right so they don't cover the centre (mimics real CRT vent placement).
+  // Spaced 0.065 apart; depth 0.07 so they face the top-front edge.
   for (let i = 0; i < 5; i++) {
     const slot = mesh(box(MON_W * 0.55, 0.025, 0.07), mVent);
     slot.position.set(0.2, MON_Y + MON_H/2 - 0.06 - i * 0.065, MON_Z + MON_D/2 - 0.18);
     group.add(slot);
   }
 
-  // A7 — ventilation on monitor RIGHT SIDE (7 thin vertical bars)
+  // A7 — ventilation on monitor RIGHT SIDE: 7 vertical bars, height 42% of monitor height.
+  // Spaced 0.055 along Z (depth), staggered slightly above centre (MON_Y + 0.1).
   for (let i = 0; i < 7; i++) {
     const slot = mesh(box(0.025, MON_H * 0.42, 0.06), mVent);
     slot.position.set(MON_W/2 - 0.05, MON_Y + 0.1, MON_Z + MON_D/2 - 0.22 - i * 0.055);
     group.add(slot);
   }
 
-  // A8 — control buttons on lower bezel (5 small buttons)
+  // A8 — control buttons on lower bezel: 5 small cylinders, radius 0.04, height 0.04.
+  // Spaced 0.16 apart (key pitch); range -0.28 to +0.36 across the bottom bezel.
+  // rotation.x = PI/2 makes the flat face protrude from the front face.
   for (let i = 0; i < 5; i++) {
     const btn = mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.04, 8), mBeigeD);
     btn.rotation.x = Math.PI / 2;
@@ -232,17 +237,19 @@ export function buildComputer(proj) {
     group.add(btn);
   }
 
-  // A9 — brand name plate (slightly inset panel at bottom of bezel)
+  // A9 — brand name plate: narrow panel on the right side of the lower bezel (offset +0.52 X).
   const brand = mesh(box(0.55, 0.07, 0.02), mBeigeD);
   brand.position.set(0.52, MON_Y - MON_H/2 + 0.09, MON_Z + MON_D/2 + 0.09);
   group.add(brand);
 
-  // A10 — swivel neck (short cylinder connecting monitor to base disc)
+  // A10 — swivel neck: tapered cylinder (0.18→0.22 radius, 0.16 tall) connecting to base.
+  // 12 sides is sufficient at this small scale — reads as round.
   const swNeck = mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.16, 12), mBeigeD);
   swNeck.position.set(0, MON_Y - MON_H/2 - 0.08, MON_Z);
   group.add(swNeck);
 
-  // A11 — swivel base disc
+  // A11 — swivel base disc: wide flat cylinder (0.52→0.56 radius, 0.07 tall).
+  // Radius 0.52–0.56 ≈ 26% of monitor width — proportionate to a 14" CRT base.
   const swBase = mesh(new THREE.CylinderGeometry(0.52, 0.56, 0.07, 16), mBeigeD);
   swBase.position.set(0, MON_Y - MON_H/2 - 0.19, MON_Z);
   group.add(swBase);
@@ -260,6 +267,9 @@ export function buildComputer(proj) {
   // ──────────────────────────────────────────────────────────
   //  B.  DESKTOP TOWER (horizontal orientation, under monitor)
   // ──────────────────────────────────────────────────────────
+  // PC_W = 2.60 — wide horizontal case (matches real "pizza-box" desktop form factor).
+  // PC_H = 0.52 — low profile (≈ 25% of monitor height) — sits under the monitor.
+  // PC_Y = -0.88 — centred below the monitor (MON_Y=0.38, gap ≈ 0.12 world units).
   const PC_W = 2.60, PC_H = 0.52, PC_D = 1.50;
   const PC_Y = -0.88, PC_Z = 0;
 
@@ -273,63 +283,71 @@ export function buildComputer(proj) {
   pcFront.position.set(0, PC_Y, PC_Z + PC_D/2 + 0.02);
   group.add(pcFront);
 
-  // B3 — 5.25" drive bay (CD-ROM slot, upper)
+  // B3 — 5.25" drive bay: CD-ROM slot, upper-left of the front panel.
+  // Width 0.72 ≈ standard 5.25" form factor scaled to world units.
+  // Dark recess box (mVent) behind a beige tray line that simulates the disc slot.
   const cdBay = mesh(box(0.72, 0.11, 0.06), mVent);
   cdBay.position.set(-0.72, PC_Y + 0.11, PC_Z + PC_D/2 + 0.06);
   group.add(cdBay);
 
-  // CD-ROM tray line
+  // CD-ROM tray line — thin bright strip across the bay opening, representing the eject tray.
   const cdTray = mesh(box(0.60, 0.016, 0.04), mBeigeD);
   cdTray.position.set(-0.72, PC_Y + 0.09, PC_Z + PC_D/2 + 0.09);
   group.add(cdTray);
 
-  // B4 — 3.5" floppy drive bay (below CD-ROM)
+  // B4 — 3.5" floppy drive bay: slightly narrower than the CD bay (0.55 vs 0.72).
+  // Positioned directly below the CD-ROM (PC_Y - 0.04).
   const fdBay = mesh(box(0.55, 0.095, 0.06), mVent);
   fdBay.position.set(-0.72, PC_Y - 0.04, PC_Z + PC_D/2 + 0.06);
   group.add(fdBay);
 
-  // Floppy slot opening
+  // Floppy slot opening — narrow horizontal slit at centre of bay.
   const fdSlot = mesh(box(0.36, 0.018, 0.04), mVent);
   fdSlot.position.set(-0.78, PC_Y - 0.04, PC_Z + PC_D/2 + 0.09);
   group.add(fdSlot);
 
-  // B5 — blank bay covers (2 empty 5.25" bays on left side)
+  // B5 — blank bay covers: 2 empty 5.25" bays below the floppy (empty drive slots).
+  // Spaced 0.14 apart — same pitch as the CD and floppy bays above.
   for (let i = 0; i < 2; i++) {
     const bay = mesh(box(0.72, 0.11, 0.04), mBeigeD);
     bay.position.set(-0.72, PC_Y - 0.16 - i * 0.14, PC_Z + PC_D/2 + 0.05);
     group.add(bay);
   }
 
-  // B6 — power button (large round, right side of front panel)
+  // B6 — power button: large round cylinder (r=0.07) on the right half of the front panel.
+  // rotation.x = PI/2 orients it face-forward. Protrudes 0.07 from the front face.
   const pwrBtn = mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.05, 12), mBeigeD);
   pwrBtn.rotation.x = Math.PI / 2;
   pwrBtn.position.set(0.92, PC_Y + 0.10, PC_Z + PC_D/2 + 0.07);
   group.add(pwrBtn);
 
-  // B7 — reset button (smaller, below power)
+  // B7 — reset button: smaller cylinder (r=0.035) directly below power button.
+  // 8-sided — rounder than a square but cheaper than 12 at this tiny size.
   const rstBtn = mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.04, 8), mBeigeD);
   rstBtn.rotation.x = Math.PI / 2;
   rstBtn.position.set(0.92, PC_Y - 0.04, PC_Z + PC_D/2 + 0.06);
   group.add(rstBtn);
 
-  // B8 — HDD access LED (amber)
+  // B8 — HDD access LED: amber rectangle (0x ffaa00) — lights when hard drive is active.
   const hddLed = mesh(new THREE.BoxGeometry(0.06, 0.022, 0.02), mLedAmb);
   hddLed.position.set(0.78, PC_Y + 0.10, PC_Z + PC_D/2 + 0.07);
   group.add(hddLed);
 
-  // B9 — power LED (green)
+  // B9 — power LED: small green sphere to the left of the HDD LED.
   const pcLed = mesh(new THREE.SphereGeometry(0.025, 8, 8), mLedGrn);
   pcLed.position.set(0.68, PC_Y + 0.10, PC_Z + PC_D/2 + 0.08);
   group.add(pcLed);
 
-  // B10 — ventilation slots on right side of PC case (horizontal bars)
+  // B10 — right-side ventilation: 9 thin vertical bars, each 55% of case height.
+  // Spaced 0.08 along Z (depth axis), covering the middle third of the side panel.
   for (let i = 0; i < 9; i++) {
     const vs = mesh(box(0.025, PC_H * 0.55, 0.055), mVent);
     vs.position.set(PC_W/2 - 0.055, PC_Y, PC_Z + 0.3 - i * 0.08);
     group.add(vs);
   }
 
-  // B11 — power supply vent on back (grid of dots implied by large dark panel)
+  // B11 — power supply vent on rear: large dark panel on back-left.
+  // Width 0.55, height 70% of case — represents the PSU exhaust grid.
   const psuVent = mesh(box(0.55, PC_H * 0.7, 0.04), mVent);
   psuVent.position.set(-0.88, PC_Y, PC_Z - PC_D/2 - 0.01);
   group.add(psuVent);
@@ -337,30 +355,41 @@ export function buildComputer(proj) {
   // ──────────────────────────────────────────────────────────
   //  C.  KEYBOARD
   // ──────────────────────────────────────────────────────────
+  // KB_W = 2.20 — wide enough to feel proportionate under the 2.60-wide tower.
+  // KB_H_F = 0.09 (front height) / KB_H_B = 0.15 (back height) — tapered wedge profile.
+  // KB_D = 0.76 — standard depth for an 101-key layout.
+  // KB_Y = -1.28 — below the tower (PC_Y=-0.88, tower bottom=-1.14, small gap below).
+  // KB_Z = 1.14 — pushed toward the viewer (in front of the tower case).
   const KB_W = 2.20, KB_H_F = 0.09, KB_H_B = 0.15, KB_D = 0.76;
   const KB_Y = -1.28, KB_Z = 1.14;
 
-  // C1 — keyboard body (wedge: two boxes to approximate taper)
+  // C1 — keyboard body (wedge: two boxes to approximate taper).
+  // Base layer is uniform KB_H_F tall; the back riser adds extra height at the rear.
   const kbBody = mesh(box(KB_W, KB_H_F, KB_D), mKeyBody);
   kbBody.position.set(0, KB_Y, KB_Z);
   group.add(kbBody);
 
-  // Back riser (thicker at back to create the wedge profile)
+  // Back riser: 0.06 tall, 0.18 deep — sits at the back edge of the base, creating the wedge.
+  // Centre at KB_Z - KB_D/2 + 0.09 = back edge of base, shifted forward by half of riser depth.
   const kbRiser = mesh(box(KB_W, 0.06, 0.18), mKeyBody);
   kbRiser.position.set(0, KB_Y + KB_H_F/2 + 0.03, KB_Z - KB_D/2 + 0.09);
   group.add(kbRiser);
 
-  // C2 — key surface area (slightly recessed top panel)
+  // C2 — key surface: slightly recessed top panel (0.02 thick, 0.01 above base top).
+  // Inset 0.05 on each side so the body edge remains visible as a rim.
   const kbTop = mesh(box(KB_W - 0.1, 0.02, KB_D - 0.08), mKeyCap);
   kbTop.position.set(0, KB_Y + KB_H_F/2 + 0.01, KB_Z);
   group.add(kbTop);
 
-  // C3 — function key row (slightly raised strip at top of keyboard)
+  // C3 — function key row: slightly raised strip at the back of the keyed area.
+  // Width and Z position match the key surface; height 0.04 = slightly proud of kbTop.
   const fnRow = mesh(box(KB_W - 0.1, 0.04, 0.09), mBeigeD);
   fnRow.position.set(0, KB_Y + KB_H_F/2 + 0.02, KB_Z - KB_D/2 + 0.10);
   group.add(fnRow);
 
-  // C4 — key rows (3 rows of individual key caps, purely decorative)
+  // C4 — key caps: 3 rows × 11 columns of individual keys (decorative only).
+  // Key size: 0.14 wide × 0.11 deep; pitch: 0.20 wide / 0.18 deep (0.06 / 0.07 gap).
+  // Starts at X = -1.0 so 11 keys span -1.0 to +1.0 (total width 2.0 ≈ KB_W - 0.20).
   const kGeo = new THREE.BoxGeometry(0.14, 0.03, 0.11);
   const kMat = mat(COL_BEIGE_LT, 14);
   for (let row = 0; row < 3; row++) {
@@ -375,7 +404,8 @@ export function buildComputer(proj) {
     }
   }
 
-  // C5 — spacebar
+  // C5 — spacebar: wide bar (0.82 × 0.10) centred slightly right (offset +0.08 X) of keyboard centre.
+  // Positioned at the front edge of the key area (KB_Z + 0.28).
   const space = mesh(box(0.82, 0.03, 0.10), mat(COL_BEIGE_LT, 14));
   space.position.set(0.08, KB_Y + KB_H_F/2 + 0.03, KB_Z + 0.28);
   group.add(space);

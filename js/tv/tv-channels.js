@@ -451,6 +451,8 @@ async function _markets(ch, ep) {
   };
 
   await fetchCoins();
+  // Auto-refresh every 60 000 ms (1 minute) — CoinGecko free tier allows ~30 req/min,
+  // so 1-minute intervals keep well within the rate limit even if the tab stays open for hours.
   _liveTimer = setInterval(fetchCoins, 60000);
 }
 
@@ -466,6 +468,7 @@ async function _sports(ch, ep) {
     const d = await r.json();
     if (ep !== _epoch) return;
 
+    // Limit to 6 games so the scoreboard fits without scrolling inside the TV overlay.
     const events = (d.events || []).slice(0, 6);
 
     if (!events.length) {
@@ -480,9 +483,12 @@ async function _sports(ch, ep) {
     }
 
     const rows = events.map(ev => {
+      // ESPN API shape: each event has one competitions[] entry with 2 competitors.
+      // homeAway field is 'home' or 'away'; fall back to index order if missing.
       const comp = ev.competitions[0];
       const home = comp.competitors.find(t => t.homeAway === 'home') || comp.competitors[0];
       const away = comp.competitors.find(t => t.homeAway === 'away') || comp.competitors[1];
+      // shortDetail gives compact status like "Q3 8:42" or "Final"; description is the verbose fallback.
       const status = ev.status?.type?.shortDetail || ev.status?.type?.description || '';
       return `
         <div class="tv-game">
@@ -511,6 +517,9 @@ async function _sports(ch, ep) {
 }
 
 // ── ⑤ TEST SIGNAL ─────────────────────────────────────────────────────────────
+// Colours approximate the SMPTE EG 1-1990 colour bar standard used by broadcast
+// engineers to calibrate monitors. Exact SMPTE levels (75% saturation) would be
+// #C0C000 etc. — here they are left at full-saturation CSS hex for visual impact.
 const BARS = [
   ['#c0c0c0','WHITE'], ['#c0c000','YELLOW'], ['#00c0c0','CYAN'],   ['#00c000','GREEN'],
   ['#c000c0','MAGENTA'],['#c00000','RED'],   ['#0000c0','BLUE'],   ['#000000','BLACK'],
@@ -531,5 +540,6 @@ function _test(/* ch, ep */) {
     </div>`;
   _content.appendChild(c);
   const el = c.querySelector('#tv-tt');
+  // Update the clock every 1000 ms — the only live element on this channel.
   _liveTimer = setInterval(() => { if (el) el.textContent = _nowTime(); }, 1000);
 }

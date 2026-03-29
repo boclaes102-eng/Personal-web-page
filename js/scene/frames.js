@@ -16,17 +16,23 @@ import { PROJECTS } from '../projects.js';
 import { buildComputer }    from '../pc/computer.js';
 import { buildTelevision } from '../tv/television.js';
 
+// Flat panel size in Three.js world units (matches the canvas aspect ratio 4:3).
 const FRAME_W = 3.2;
 const FRAME_H = 2.4;
 
-// Project positions: [azimuth_deg, elevation_deg, radius]
+// Orbital positions for each project frame — [azimuth_deg, elevation_deg, radius].
+// Azimuth: 0° = forward (-Z), clockwise when viewed from above.
+// Elevation: positive = above horizon, negative = below.
+// Radius: distance from the world origin (camera starts at 0,0,0).
+// Frames are spread around the full 360° with slight vertical variation so they
+// never perfectly overlap and the scene feels like a real 3D space.
 const FRAME_POLAR = [
-  [  0,   5,  14],
-  [ 62,  -6,  13],
-  [128,   8,  15],
-  [195,  -5,  13],
-  [258,   7,  14],
-  [318,  -4,  12],
+  [  0,   5,  14],  // project 0 — straight ahead, slightly up
+  [ 62,  -6,  13],  // project 1 — right, slightly down
+  [128,   8,  15],  // project 2 — right-back, slightly up, furthest
+  [195,  -5,  13],  // project 3 — behind-left, slightly down
+  [258,   7,  14],  // project 4 — left, slightly up
+  [318,  -4,  12],  // project 5 — left-forward, slightly down, closest
 ];
 
 export const frames       = [];
@@ -43,13 +49,16 @@ function polarToWorld(az_deg, el_deg, r) {
   );
 }
 
+// Draws the project card texture onto a 1024×768 canvas (4:3, matches FRAME_W/H ratio).
+// Each project in projects.js supplies bgColorTop, bgColorBottom, glowColor, title, tech.
 function makeFrameTexture(proj) {
-  const W = 1024, H = 768;
+  const W = 1024, H = 768; // canvas pixels — arbitrary resolution, looks sharp at zoom distance
   const cv  = document.createElement('canvas');
   cv.width  = W; cv.height = H;
   const ctx = cv.getContext('2d');
 
-  // Background
+  // Base fill then gradient overlay. 'cc' = 80% opacity, 'aa' = 67% — lets the
+  // near-black base show through so dark gradients don't wash out.
   ctx.fillStyle = '#05080f';
   ctx.fillRect(0, 0, W, H);
   const bg = ctx.createLinearGradient(0, 0, 0, H);
@@ -91,15 +100,17 @@ function makeFrameTexture(proj) {
   ctx.beginPath(); ctx.moveTo(80, 318); ctx.lineTo(W-80, 318); ctx.stroke();
   ctx.globalAlpha = 1.0;
 
-  // Tech tag pills — white text always readable, auto-shrinks if needed
+  // Tech tag pills — measure all tags first, then scale font down if they won't
+  // all fit within the panel width (W - 60px padding). Minimum font size is 20px.
   const tags    = proj.tech;
-  const padX    = 22, tagH = 52, gap = 12;
+  const padX    = 22, tagH = 52, gap = 12; // padX = horizontal padding inside each pill
   let fontSize  = 30;
   ctx.font      = `bold ${fontSize}px "Courier New",monospace`;
   let tagWidths = tags.map(t => ctx.measureText(t).width + padX * 2);
   let totalTagW = tagWidths.reduce((a, b) => a + b, 0) + gap * (tags.length - 1);
 
   if (totalTagW > W - 60) {
+    // Scale font proportionally so all tags fit; floor keeps it pixel-aligned.
     fontSize    = Math.max(20, Math.floor(fontSize * (W - 60) / totalTagW));
     ctx.font    = `bold ${fontSize}px "Courier New",monospace`;
     tagWidths   = tags.map(t => ctx.measureText(t).width + padX * 2);
@@ -178,12 +189,16 @@ export function buildFrames() {
       const { group, clickTarget } = buildComputer(proj);
       group.position.copy(wp);
       group.lookAt(0, 0, 0);
+      // floatPhase  — random start offset so all frames don't bob in sync.
+      // floatAmp    — world-unit vertical travel (0.28–0.38). Larger than flat panels
+      //               because 3D objects read as heavier and need bigger motion to feel alive.
+      // floatSpeed  — radians/second of the sine wave (0.14–0.22). Slower = weightier feel.
       Object.assign(group.userData, {
         baseQuat:   group.quaternion.clone(),
         baseY:      wp.y,
         floatPhase: Math.random() * Math.PI * 2,
-        floatAmp:   0.28 + Math.random() * 0.10,  // larger drift than flat panels
-        floatSpeed: 0.14 + Math.random() * 0.08,  // slower = weightier feel
+        floatAmp:   0.28 + Math.random() * 0.10,
+        floatSpeed: 0.14 + Math.random() * 0.08,
       });
       clickTarget.userData.frameGroup = group;
       clickTargets.push(clickTarget);
@@ -197,12 +212,13 @@ export function buildFrames() {
       const { group, clickTarget } = buildTelevision(proj);
       group.position.copy(wp);
       group.lookAt(0, 0, 0);
+      // TV floats slightly slower and smaller than the PC — it feels bulkier.
       Object.assign(group.userData, {
         baseQuat:   group.quaternion.clone(),
         baseY:      wp.y,
         floatPhase: Math.random() * Math.PI * 2,
-        floatAmp:   0.24 + Math.random() * 0.09,
-        floatSpeed: 0.15 + Math.random() * 0.07,
+        floatAmp:   0.24 + Math.random() * 0.09,  // 0.24–0.33 world units
+        floatSpeed: 0.15 + Math.random() * 0.07,  // 0.15–0.22 rad/s
       });
       clickTarget.userData.frameGroup = group;
       clickTargets.push(clickTarget);
@@ -220,8 +236,8 @@ export function buildFrames() {
       baseQuat:   group.quaternion.clone(),
       baseY:      wp.y,
       floatPhase: Math.random() * Math.PI * 2,
-      floatAmp:   0.07 + Math.random() * 0.055,
-      floatSpeed: 0.32 + Math.random() * 0.22,
+      floatAmp:   0.07 + Math.random() * 0.055, // 0.07–0.125 — subtle, flat panels feel lighter
+      floatSpeed: 0.32 + Math.random() * 0.22,  // 0.32–0.54 rad/s — faster = lighter feel
       glowMesh:   null,
       panelMesh:  null,
     };
@@ -256,6 +272,8 @@ export function animateFrames(t) {
     const d = f.userData;
     f.position.y = d.baseY + Math.sin(t * d.floatSpeed + d.floatPhase) * d.floatAmp;
     f.quaternion.copy(d.baseQuat);
+    // Gentle pitch wobble (±0.014 rad ≈ ±0.8°) at 65% of float frequency — adds life
+    // without being distracting. 3D objects use their own multi-axis animator instead.
     _tiltQ.setFromAxisAngle(_tiltAxis, Math.sin(t * d.floatSpeed * 0.65 + d.floatPhase) * 0.014);
     f.quaternion.multiply(_tiltQ);
   });

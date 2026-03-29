@@ -12,28 +12,31 @@ export let starUniforms = null;
 
 // ── Stars ─────────────────────────────────────────────────────────────────────
 function buildStars() {
-  const N         = 3500;
+  const N         = 3500; // star count — enough to feel dense without stressing the GPU
   const positions = new Float32Array(N * 3);
   const sizes     = new Float32Array(N);
   const colors    = new Float32Array(N * 3);
 
-  // HDR values (> 1.0) so stars still bloom at threshold 1.01
+  // HDR colour values (> 1.0) so stars exceed the bloom threshold (1.01) and glow.
+  // Five colours represent O/A/G/K/M spectral classes: blue-white, white, warm-white, orange, blue.
   const palette = [
-    [1.6, 1.6, 1.6],
-    [0.8, 1.0, 1.6],
-    [1.6, 1.6, 0.8],
-    [1.6, 0.8, 0.6],
-    [0.7, 0.9, 1.6],
+    [1.6, 1.6, 1.6], // white
+    [0.8, 1.0, 1.6], // blue-white
+    [1.6, 1.6, 0.8], // warm white
+    [1.6, 0.8, 0.6], // orange
+    [0.7, 0.9, 1.6], // blue
   ];
 
   for (let i = 0; i < N; i++) {
+    // Uniform spherical distribution — theta/phi method avoids polar clustering.
     const theta = Math.random() * Math.PI * 2;
     const phi   = Math.acos(2 * Math.random() - 1);
+    // Radius 250–650 units: inside the fog range so distant stars fade naturally.
     const r     = 250 + Math.random() * 400;
     positions[i*3]   = r * Math.sin(phi) * Math.cos(theta);
     positions[i*3+1] = r * Math.cos(phi);
     positions[i*3+2] = r * Math.sin(phi) * Math.sin(theta);
-    sizes[i] = 0.6 + Math.random() * 3.0;
+    sizes[i] = 0.6 + Math.random() * 3.0; // point size in pixels (before shader twinkle)
     const c = palette[Math.floor(Math.random() * palette.length)];
     colors[i*3] = c[0]; colors[i*3+1] = c[1]; colors[i*3+2] = c[2];
   }
@@ -54,6 +57,9 @@ function buildStars() {
       varying   vec3  vColor;
       varying   float vAlpha;
       void main() {
+        // Twinkle: each star gets a unique phase from its world position, so they
+        // flicker independently. Frequencies 13.7/9.1/7.3 are chosen to be
+        // incommensurate (no common factors) — avoids visible synchronised patterns.
         float tw = 0.55 + 0.45 * sin(time * 1.8 + position.x * 13.7 + position.y * 9.1 + position.z * 7.3);
         vAlpha   = tw;
         vColor   = starColor * tw;
@@ -65,6 +71,8 @@ function buildStars() {
       varying vec3  vColor;
       varying float vAlpha;
       void main() {
+        // Convert gl_PointCoord (0–1 square) to a 0–1 radial distance from centre.
+        // smoothstep(0.25, 1.0) gives a soft circular disc instead of a hard square pixel.
         float d = length(gl_PointCoord - 0.5) * 2.0;
         float a = (1.0 - smoothstep(0.25, 1.0, d)) * vAlpha;
         gl_FragColor = vec4(vColor, a);
@@ -77,10 +85,14 @@ function buildStars() {
 }
 
 // ── Nebulas ───────────────────────────────────────────────────────────────────
-function makeNebulaCanvas(r, g, b) {
+// Generates a soft cloud texture on a 512×512 canvas using three overlapping
+// radial gradients ("blobs"). Exported so celestials.js can reuse it for planet coronas.
+export function makeNebulaCanvas(r, g, b) {
   const cv  = document.createElement('canvas');
   cv.width  = cv.height = 512;
   const ctx = cv.getContext('2d');
+  // Three off-centre blobs of different sizes give an organic, irregular shape.
+  // Opacity 0.35 → 0 creates a soft edge that blends with AdditiveBlending.
   const blobs = [{ x: 256, y: 256, r: 230 }, { x: 180, y: 180, r: 150 }, { x: 320, y: 300, r: 130 }];
   blobs.forEach(blob => {
     const g2 = ctx.createRadialGradient(blob.x, blob.y, 0, blob.x, blob.y, blob.r);
@@ -94,12 +106,15 @@ function makeNebulaCanvas(r, g, b) {
 }
 
 function buildNebulas() {
+  // Each entry: RGB colour, world-space position, sprite scale (world units), rotation (rad).
+  // Positions are behind and around the play area (-Z = away from camera start).
+  // Colours chosen to complement each other: purple, blue, orange, teal, deep-violet.
   const defs = [
-    { r:80,  g:20,  b:160, pos:[ 60, -10, -140], sz:220, rot: 0.4  },
-    { r:0,   g:60,  b:130, pos:[-110, 30, -180], sz:260, rot:-0.6  },
-    { r:150, g:40,  b:10,  pos:[ 110,-50, -200], sz:190, rot: 0.9  },
-    { r:20,  g:90,  b:110, pos:[ -40,-30, -110], sz:160, rot:-0.25 },
-    { r:70,  g:0,   b:110, pos:[ -20, 50, -160], sz:180, rot: 1.2  },
+    { r:80,  g:20,  b:160, pos:[ 60, -10, -140], sz:220, rot: 0.4  }, // purple
+    { r:0,   g:60,  b:130, pos:[-110, 30, -180], sz:260, rot:-0.6  }, // blue, largest
+    { r:150, g:40,  b:10,  pos:[ 110,-50, -200], sz:190, rot: 0.9  }, // orange
+    { r:20,  g:90,  b:110, pos:[ -40,-30, -110], sz:160, rot:-0.25 }, // teal
+    { r:70,  g:0,   b:110, pos:[ -20, 50, -160], sz:180, rot: 1.2  }, // deep violet
   ];
   defs.forEach(d => {
     const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
@@ -117,13 +132,15 @@ function buildNebulas() {
 }
 
 // ── Comet ─────────────────────────────────────────────────────────────────────
+// IIFE so the comet's state variables are private. The returned object exposes
+// only update(dt) — called each frame from updateEnvironment().
 const comet = (() => {
-  const TRAIL    = 90;
-  const trailPos = new Float32Array(TRAIL * 3);
-  const trailCol = new Float32Array(TRAIL * 3);
+  const TRAIL    = 90;  // number of trail segments — more = longer tail, slightly more GPU cost
+  const trailPos = new Float32Array(TRAIL * 3); // positions updated every frame (shift buffer)
+  const trailCol = new Float32Array(TRAIL * 3); // colours fade from bright head to transparent tail
 
   const head = new THREE.Mesh(
-    new THREE.SphereGeometry(0.45, 10, 10),
+    new THREE.SphereGeometry(0.45, 10, 10), // small sphere for the bright nucleus
     new THREE.MeshBasicMaterial({ color: 0xffffff })
   );
   head.visible = false;
@@ -159,11 +176,16 @@ const comet = (() => {
   trail.visible = false;
   scene.add(trail);
 
+  // Comet state machine: rests for ~22 s, then flies across for ~9 s, then rests again.
+  // restTimer starts at 10 so the comet appears ~12 s after page load (not immediately).
   const s = {
-    active: false, t: 0,
-    restTimer: 10, restDuration: 22,
-    start: new THREE.Vector3(), end: new THREE.Vector3(),
-    duration: 9,
+    active:       false,
+    t:            0,            // 0→1 progress of current flight
+    restTimer:    10,           // seconds elapsed since last landing
+    restDuration: 22,           // seconds to wait before next launch
+    start: new THREE.Vector3(),
+    end:   new THREE.Vector3(),
+    duration: 9,                // seconds for a full crossing
   };
 
   function spawn() {
@@ -201,11 +223,14 @@ const comet = (() => {
       }
       trailPos[0] = p.x; trailPos[1] = p.y; trailPos[2] = p.z;
 
+      // Tail colour: head (i=0) is bright blue-white; tail (i=TRAIL-1) fades to dim blue.
+      // Power 1.6 gives a non-linear fade so the bright core looks dense.
+      // R and G channels have a minimum floor (0.22 / 0.12) so the tail stays visible.
       for (let i = 0; i < TRAIL; i++) {
         const fade = Math.pow(1 - i / TRAIL, 1.6);
-        trailCol[i*3]   = 0.75 * fade + 0.22;
-        trailCol[i*3+1] = 0.88 * fade + 0.12;
-        trailCol[i*3+2] = 1.0;
+        trailCol[i*3]   = 0.75 * fade + 0.22; // R
+        trailCol[i*3+1] = 0.88 * fade + 0.12; // G
+        trailCol[i*3+2] = 1.0;                 // B — always full blue
       }
       trailGeo.attributes.position.needsUpdate = true;
       trailGeo.attributes.color.needsUpdate    = true;
