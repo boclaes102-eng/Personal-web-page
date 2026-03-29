@@ -13,7 +13,8 @@
 import * as THREE from 'three';
 import { scene }  from './renderer.js';
 import { PROJECTS } from './projects.js';
-import { buildComputer } from './computer.js';
+import { buildComputer }    from './computer.js';
+import { buildTelevision } from './television.js';
 
 const FRAME_W = 3.2;
 const FRAME_H = 2.4;
@@ -183,6 +184,25 @@ export function buildFrames() {
         floatPhase: Math.random() * Math.PI * 2,
         floatAmp:   0.28 + Math.random() * 0.10,  // larger drift than flat panels
         floatSpeed: 0.14 + Math.random() * 0.08,  // slower = weightier feel
+      });
+      clickTarget.userData.frameGroup = group;
+      clickTargets.push(clickTarget);
+      scene.add(group);
+      frames.push(group);
+      return;
+    }
+
+    // ── Television variant ────────────────────────────────────────────────────
+    if (proj.television) {
+      const { group, clickTarget } = buildTelevision(proj);
+      group.position.copy(wp);
+      group.lookAt(0, 0, 0);
+      Object.assign(group.userData, {
+        baseQuat:   group.quaternion.clone(),
+        baseY:      wp.y,
+        floatPhase: Math.random() * Math.PI * 2,
+        floatAmp:   0.24 + Math.random() * 0.09,
+        floatSpeed: 0.15 + Math.random() * 0.07,
       });
       clickTarget.userData.frameGroup = group;
       clickTargets.push(clickTarget);

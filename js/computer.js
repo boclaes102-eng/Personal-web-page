@@ -56,6 +56,17 @@ function makeScreenTex(hexGlow) {
   cv.width = W; cv.height = H;
   const ctx = cv.getContext('2d');
 
+  // Rounded-corner clip — corners become transparent, screen blends into bezel
+  const R = 32;
+  ctx.beginPath();
+  ctx.moveTo(R, 0); ctx.lineTo(W - R, 0);
+  ctx.quadraticCurveTo(W, 0, W, R);
+  ctx.lineTo(W, H - R); ctx.quadraticCurveTo(W, H, W - R, H);
+  ctx.lineTo(R, H); ctx.quadraticCurveTo(0, H, 0, H - R);
+  ctx.lineTo(0, R); ctx.quadraticCurveTo(0, 0, R, 0);
+  ctx.closePath();
+  ctx.clip();
+
   // CRT phosphor background
   ctx.fillStyle = '#050c05';
   ctx.fillRect(0, 0, W, H);
@@ -193,9 +204,9 @@ export function buildComputer(proj) {
   monRecess.position.set(0, SCR_Y, MON_Z + MON_D/2 + 0.08);
   group.add(monRecess);
 
-  // A4 — actual CRT screen
+  // A4 — actual CRT screen (0.01 ahead of recess front face to avoid z-fighting)
   const screen = mesh(new THREE.PlaneGeometry(SCR_W, SCR_H), mScreen);
-  screen.position.set(0, SCR_Y, MON_Z + MON_D/2 + 0.14);
+  screen.position.set(0, SCR_Y, MON_Z + MON_D/2 + 0.155);
   group.add(screen);
 
   // A5 — screen glow halo

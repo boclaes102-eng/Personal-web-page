@@ -11,6 +11,7 @@ import { frames }                              from './frames.js';
 import { showOverlay, hideOverlay,
          showLore,    hideLore }               from './overlay.js';
 import { showTerminal, hideTerminal }          from './terminal.js';
+import { showTV, hideTV }                      from './tv-channels.js';
 
 const { gsap } = window;
 
@@ -49,18 +50,19 @@ export function zoomIn(group) {
   document.body.classList.remove('hovering');
   shared.hoveredFrame = null;
 
-  const isComputer = !!group.userData.isComputer;
-  const worldPos   = new THREE.Vector3();
-  // For the computer, target the screen mesh directly so the camera centers
-  // on the monitor screen rather than the midpoint of the whole setup.
-  if (isComputer && group.userData.screenMesh) {
+  const isComputer    = !!group.userData.isComputer;
+  const isTelevision  = !!group.userData.isTelevision;
+  const worldPos      = new THREE.Vector3();
+  // For the computer and TV, target the screen mesh so the camera centres
+  // on the actual display rather than the group's geometric midpoint.
+  if ((isComputer || isTelevision) && group.userData.screenMesh) {
     group.userData.screenMesh.getWorldPosition(worldPos);
   } else {
     group.getWorldPosition(worldPos);
   }
-  const fwd        = new THREE.Vector3(0, 0, 1).applyQuaternion(group.quaternion);
-  const zoomDist   = isComputer ? 2.2 : 3.6;
-  const camTarget  = worldPos.clone().addScaledVector(fwd, zoomDist);
+  const fwd       = new THREE.Vector3(0, 0, 1).applyQuaternion(group.quaternion);
+  const zoomDist  = isComputer ? 2.2 : isTelevision ? 2.5 : 3.6;
+  const camTarget = worldPos.clone().addScaledVector(fwd, zoomDist);
 
   const tl = gsap.timeline({
     onComplete: () => {
@@ -68,6 +70,9 @@ export function zoomIn(group) {
       if (isComputer) {
         _currentZoomType = 'computer';
         showTerminal(() => zoomOut());
+      } else if (isTelevision) {
+        _currentZoomType = 'television';
+        showTV(() => zoomOut());
       } else {
         _currentZoomType = 'project';
         showOverlay(group.userData.proj);
@@ -122,6 +127,8 @@ export function zoomOut() {
   if (_currentZoomType === 'computer') {
     // CRT shutdown plays first, camera flies back after
     hideTerminal(_doZoomOut);
+  } else if (_currentZoomType === 'television') {
+    hideTV(_doZoomOut);
   } else {
     if (_currentZoomType === 'celestial') hideLore(); else hideOverlay();
     _doZoomOut();

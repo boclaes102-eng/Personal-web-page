@@ -18,18 +18,13 @@ export const PROJECTS = [
   },
   {
     id: 1,
-    title: "Project Beta",
+    television: true,         // renders as a 3D retro CRT television in the scene
+    title: "Retro TV",
     description:
-      "A machine-learning pipeline that classifies handwritten documents and extracts structured data. Achieved 94 % accuracy on the test set using a fine-tuned CNN.",
-    tech: ["Python", "PyTorch", "Flask", "Docker"],
-    bgColorTop:    "#1a0a2e",
-    bgColorBottom: "#2a0a3a",
-    glowColor:     "#cc44ff",
-    media: [
-      "https://picsum.photos/seed/beta1/640/360",
-      "https://picsum.photos/seed/beta2/640/360",
-      "https://picsum.photos/seed/beta3/640/360"
-    ],
+      "A retro 1970s television floating in space. Tune through channels — breaking news, weather forecast, live market data, sports scores, and a broadcast test signal.",
+    tech: ["JavaScript", "Canvas API", "CSS", "HTML"],
+    glowColor: "#88aaff",     // phosphor blue-white
+    media: [],
     link: "#"
   },
   {
