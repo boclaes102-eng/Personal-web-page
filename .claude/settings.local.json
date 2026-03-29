@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(wc -l /c/Users/JessP/Desktop/Personal-web-page/js/*.js /c/Users/JessP/Desktop/Personal-web-page/css/*.css)",
-      "Bash(sed -n '433,615p' css/style.css)",
-      "Bash(sed -n '617,1028p' css/style.css)"
-    ]
-  }
-}
