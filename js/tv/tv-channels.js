@@ -38,7 +38,11 @@ let _staticCtx = null;
 let _curIdx    = 0;
 let _onClose   = null;
 let _liveTimer = null;
-let _epoch     = 0;   // incremented on every channel switch; stale async ops check this
+// _epoch is incremented every time the user changes channel. Each async channel
+// handler captures the epoch value at the moment it starts and bails out if it
+// has changed by the time data arrives — prevents a slow response from a
+// previous channel overwriting the content of the newly selected one.
+let _epoch     = 0;
 
 // ── Geolocation (fetched once, cached for session) ────────────────────────────
 let _locationPromise = null;
@@ -66,7 +70,7 @@ function _startLocation() {
         }
       },
       () => _ipGeo().then(resolve),
-      { timeout: 6000 }
+      { timeout: 6000 } // 6 s — browser default is infinite; cap it so we fall back promptly
     );
   });
 }
@@ -77,7 +81,7 @@ async function _ipGeo() {
     const d = await r.json();
     return { lat: d.latitude, lon: d.longitude, city: d.city, country: d.country_name, cc: d.country_code || 'US' };
   } catch {
-    // Hard fallback — Brussels
+    // Last-resort fallback when both GPS and IP geo fail (e.g. offline, blocked).
     return { lat: 50.85, lon: 4.35, city: 'Brussels', country: 'Belgium', cc: 'BE' };
   }
 }
@@ -254,6 +258,8 @@ async function _news(ch, ep) {
     const idsRes = await fetch('https://hacker-news.firebaseio.com/v0/topstories.json');
     if (ep !== _epoch) return;
     const ids = await idsRes.json();
+    // Fetch the top 12 stories in parallel. Individual failures return null and
+    // are filtered out below — one bad story doesn't kill the whole feed.
     const stories = await Promise.all(
       ids.slice(0, 12).map(id =>
         fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`)
@@ -267,7 +273,8 @@ async function _news(ch, ep) {
   if (!headlines.length) headlines = ['NEWS FEED CURRENTLY UNAVAILABLE'];
   if (ep !== _epoch) return;
 
-  // Build the ticker once (3 copies → seamless CSS loop)
+  // The ticker CSS animation slides the text left by 33.33%, so we need 3 copies
+  // of the source string to fill the full width and loop seamlessly.
   const tickerSrc = headlines.join('  ▶  ') + '  ▶  ';
   let hlIdx = 0;
 
@@ -379,9 +386,11 @@ async function _weather(ch, ep) {
 }
 
 // ── ③ MARKETS — CoinGecko crypto prices ──────────────────────────────────────
+// Six coins chosen as the most widely recognised by a general audience.
 const COIN_IDS   = ['bitcoin', 'ethereum', 'solana', 'binancecoin', 'cardano', 'ripple'];
 const COIN_LABEL = { bitcoin:'BTC', ethereum:'ETH', solana:'SOL', binancecoin:'BNB', cardano:'ADA', ripple:'XRP' };
 const COIN_NAME  = { bitcoin:'Bitcoin', ethereum:'Ethereum', solana:'Solana', binancecoin:'BNB', cardano:'Cardano', ripple:'Ripple' };
+// ISO 3166-1 alpha-2 codes for Eurozone countries — used to show EUR instead of USD.
 const EUROZONE   = new Set(['AT','BE','CY','EE','FI','FR','DE','GR','IE','IT','LV','LT','LU','MT','NL','PT','SK','SI','ES']);
 
 async function _markets(ch, ep) {

@@ -11,10 +11,10 @@
  */
 
 import * as THREE from 'three';
-import { scene }  from './renderer.js';
-import { PROJECTS } from './projects.js';
-import { buildComputer }    from './computer.js';
-import { buildTelevision } from './television.js';
+import { scene }  from '../core/renderer.js';
+import { PROJECTS } from '../projects.js';
+import { buildComputer }    from '../pc/computer.js';
+import { buildTelevision } from '../tv/television.js';
 
 const FRAME_W = 3.2;
 const FRAME_H = 2.4;

@@ -33,38 +33,50 @@ const COMMON_PW = new Set([
 
 const KB_ROWS = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm', '1234567890'];
 
+// Shannon entropy estimate: bits = length × log₂(pool size).
+// Pool size = number of possible characters in the character set used.
+// 26 lowercase + 26 uppercase + 10 digits + ~32 common symbols = max 94.
 function calcEntropy(pw) {
   let pool = 0;
   if (/[a-z]/.test(pw))         pool += 26;
   if (/[A-Z]/.test(pw))         pool += 26;
   if (/[0-9]/.test(pw))         pool += 10;
-  if (/[^a-zA-Z0-9]/.test(pw)) pool += 32;
+  if (/[^a-zA-Z0-9]/.test(pw)) pool += 32; // symbols/punctuation
   return pool > 0 ? Math.floor(pw.length * Math.log2(pool)) : 0;
 }
 
+// Checks for patterns that make a password predictable regardless of length/entropy.
+// Returns an array of { sev: 'high'|'medium'|'low', text } issue objects.
 function detectPatterns(pw) {
   const issues = [], lo = pw.toLowerCase();
+
   if (COMMON_PW.has(lo))
     issues.push({ sev: 'high',   text: 'Very common password — in breach databases' });
+
+  // Regex (.)\1{2,} matches any character repeated 3+ times (e.g. "aaa", "111").
   if (/(.)\1{2,}/.test(pw))
     issues.push({ sev: 'medium', text: 'Repeated characters  (aaa / 111)' });
 
+  // Sequential letters: check every 3-char window for ascending/descending runs.
+  // Char codes 97–122 = a–z (lowercase). Both abc and cba are flagged.
   let seqL = false;
   for (let i = 0; i <= lo.length - 3; i++) {
     const a = lo.charCodeAt(i), b = lo.charCodeAt(i+1), c = lo.charCodeAt(i+2);
-    const al = v => v >= 97 && v <= 122;
+    const al = v => v >= 97 && v <= 122; // is lowercase letter?
     if (al(a) && al(b) && al(c) && (b===a+1&&c===b+1 || b===a-1&&c===b-1)) { seqL = true; break; }
   }
   if (seqL) issues.push({ sev: 'low', text: 'Sequential letters  (abc / cba)' });
 
+  // Sequential digits: char codes 48–57 = 0–9. Both 123 and 321 are flagged.
   let seqD = false;
   for (let i = 0; i <= pw.length - 3; i++) {
     const a = pw.charCodeAt(i), b = pw.charCodeAt(i+1), c = pw.charCodeAt(i+2);
-    const dg = v => v >= 48 && v <= 57;
+    const dg = v => v >= 48 && v <= 57; // is digit?
     if (dg(a) && dg(b) && dg(c) && (b===a+1&&c===b+1 || b===a-1&&c===b-1)) { seqD = true; break; }
   }
   if (seqD) issues.push({ sev: 'low', text: 'Sequential digits  (123 / 321)' });
 
+  // Keyboard walk: any 4-char substring that appears in a QWERTY row (or its reverse).
   let kbWalk = false;
   outer: for (const row of KB_ROWS) {
     const rev = row.split('').reverse().join('');
@@ -74,22 +86,37 @@ function detectPatterns(pw) {
     }
   }
   if (kbWalk) issues.push({ sev: 'medium', text: 'Keyboard walk  (qwert / asdf)' });
+
   if (/^[0-9]+$/.test(pw))     issues.push({ sev: 'medium', text: 'Digits only' });
   if (/^[a-zA-Z]+$/.test(pw)) issues.push({ sev: 'low',    text: 'Letters only' });
 
   return issues;
 }
 
+// Weighted score out of 100 — three positive components plus a pattern penalty:
+//   Length      (max 25 pts) — NIST recommends ≥12 chars; 16+ is excellent.
+//   Complexity  (max 25 pts) — number of distinct character types used.
+//   Entropy     (max 30 pts) — bits of entropy from calcEntropy().
+//   Patterns    (max 20 pts, can reduce to 0) — penalty for detected bad patterns.
 function calcScore(pw, ent, pats) {
   const len = pw.length;
   let s = 0;
+
+  // Length score: thresholds chosen to match NIST SP 800-63B guidance.
   s += len>=16?25 : len>=12?20 : len>=10?15 : len>=8?10 : len>=5?5 : 0;
+
+  // Complexity score: reward using more character type categories (lower/upper/digit/symbol).
   const t = [/[a-z]/,/[A-Z]/,/[0-9]/,/[^a-zA-Z0-9]/].filter(r=>r.test(pw)).length;
   s += ({4:25,3:18,2:10,1:0,0:0})[t] ?? 0;
+
+  // Entropy score: 80+ bits is considered very strong by security researchers.
   s += ent>=80?30 : ent>=60?25 : ent>=50?20 : ent>=36?15 : ent>=28?8 : 0;
+
+  // Pattern penalty: start with 20 bonus points, subtract for each detected weakness.
   let ps = 20;
   for (const p of pats) ps -= p.sev==='high'?20 : p.sev==='medium'?10 : 5;
-  s += Math.max(0, ps);
+  s += Math.max(0, ps); // never go below 0 for this component
+
   return Math.min(100, s);
 }
 

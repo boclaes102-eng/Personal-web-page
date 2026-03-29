@@ -12,25 +12,7 @@
  */
 
 import * as THREE from 'three';
-import { scene }  from './renderer.js';
-
-// ── Scene lights (added once; ShaderMaterial stars ignore them) ───────────────
-let _lightsAdded = false;
-function ensureLights() {
-  if (_lightsAdded) return;
-  _lightsAdded = true;
-  const amb = new THREE.AmbientLight(0xffffff, 0.22);
-  amb.name = '__compAmbient';
-  scene.add(amb);
-  const dir = new THREE.DirectionalLight(0xffffff, 0.6);
-  dir.position.set(5, 8, 6);
-  dir.name = '__compDir';
-  scene.add(dir);
-  const fill = new THREE.DirectionalLight(0x8888ff, 0.15);
-  fill.position.set(-4, -2, -3);
-  fill.name = '__compFill';
-  scene.add(fill);
-}
+import { scene, ensureLights } from '../core/renderer.js';
 
 // ── Material palette ─────────────────────────────────────────────────────────
 // classic "greige" beige of 90s PC hardware
@@ -50,13 +32,17 @@ function box(w, h, d) { return new THREE.BoxGeometry(w, h, d); }
 function mesh(geo, mat_) { return new THREE.Mesh(geo, mat_); }
 
 // ── Idle screen canvas texture ────────────────────────────────────────────────
+// Draws a static "boot screen" onto a 512×400 canvas that is then used as a
+// Three.js texture on the monitor plane. Called once per buildComputer() call.
+// hexGlow is the project's accent colour (e.g. '#00ff41' for green phosphor).
 function makeScreenTex(hexGlow) {
-  const W = 512, H = 400;
+  const W = 512, H = 400; // canvas pixels — arbitrary, just needs to look sharp at zoom distance
   const cv = document.createElement('canvas');
   cv.width = W; cv.height = H;
   const ctx = cv.getContext('2d');
 
-  // Rounded-corner clip — corners become transparent, screen blends into bezel
+  // Clip everything to a rounded rectangle so the screen plane blends into the
+  // bezel instead of showing hard rectangular corners. R=32px at 512px wide ≈ 6%.
   const R = 32;
   ctx.beginPath();
   ctx.moveTo(R, 0); ctx.lineTo(W - R, 0);
@@ -67,17 +53,17 @@ function makeScreenTex(hexGlow) {
   ctx.closePath();
   ctx.clip();
 
-  // CRT phosphor background
+  // Very dark green-black — matches the phosphor colour of a monochrome CRT.
   ctx.fillStyle = '#050c05';
   ctx.fillRect(0, 0, W, H);
 
-  // Subtle scanlines
+  // Scanlines — one dark stripe every 3px, 18% opacity keeps them subtle.
   for (let y = 0; y < H; y += 3) {
     ctx.fillStyle = 'rgba(0,0,0,0.18)';
     ctx.fillRect(0, y, W, 1);
   }
 
-  // Vignette
+  // Radial vignette — inner radius 28% of height, outer 72%; darkens edges 55%.
   const vig = ctx.createRadialGradient(W/2, H/2, H*0.28, W/2, H/2, H*0.72);
   vig.addColorStop(0,   'transparent');
   vig.addColorStop(1,   'rgba(0,0,0,0.55)');
@@ -104,7 +90,8 @@ function makeScreenTex(hexGlow) {
   g('[ CLICK  TO  INTERACT ]', W/2, 252, '16px "Courier New",monospace', 0.5);
   g('C:\\PANALYZE>  _',        W/2, 295, '14px "Courier New",monospace', 0.35);
 
-  // Corner brackets
+  // Decorative corner brackets — common UI motif on retro terminal software.
+  // '33' appended to hexGlow = 20% opacity (0x33 / 0xFF ≈ 0.2).
   ctx.save();
   ctx.strokeStyle = hexGlow + '33';
   ctx.lineWidth   = 1.2;
@@ -183,8 +170,10 @@ export function buildComputer(proj) {
   // ──────────────────────────────────────────────────────────
   //  A.  CRT MONITOR
   // ──────────────────────────────────────────────────────────
+  // All dimensions in Three.js world units. Monitor proportions based on a typical
+  // 14-inch 4:3 CRT of the early 90s — wide bezel, deep body.
   const MON_W = 2.05, MON_H = 1.74, MON_D = 1.55;
-  const MON_Y = 0.38, MON_Z = 0;
+  const MON_Y = 0.38, MON_Z = 0; // centred on Z, raised on Y to sit above the tower
 
   // A1 — main housing (the big boxy body)
   const monBody = mesh(box(MON_W, MON_H, MON_D), mBeige);
@@ -198,6 +187,7 @@ export function buildComputer(proj) {
   group.add(monFace);
 
   // A3 — screen depression (dark recess behind glass)
+  // Screen is 70% of monitor width and 66% of height — leaves a thick bezel on all sides.
   const SCR_W = MON_W * 0.70, SCR_H = MON_H * 0.66;
   const SCR_Y = MON_Y + 0.07;
   const monRecess = mesh(box(SCR_W + 0.14, SCR_H + 0.14, 0.12), mVent);
@@ -211,7 +201,7 @@ export function buildComputer(proj) {
 
   // A5 — screen glow halo
   const glowPlane = mesh(
-    new THREE.PlaneGeometry(SCR_W + 0.45, SCR_H + 0.45),
+    new THREE.PlaneGeometry(SCR_W + 0.08, SCR_H + 0.08),
     new THREE.MeshBasicMaterial({
       color: gc, transparent: true, opacity: 0.05,
       blending: THREE.AdditiveBlending, depthWrite: false,

@@ -7,14 +7,15 @@
 import * as THREE from 'three';
 import { camera }                              from './renderer.js';
 import { shared }                              from './state.js';
-import { frames }                              from './frames.js';
+import { frames }                              from '../scene/frames.js';
 import { showOverlay, hideOverlay,
          showLore,    hideLore }               from './overlay.js';
-import { showTerminal, hideTerminal }          from './terminal.js';
-import { showTV, hideTV }                      from './tv-channels.js';
+import { showTerminal, hideTerminal }          from '../pc/terminal.js';
+import { showTV, hideTV }                      from '../tv/tv-channels.js';
 
 const { gsap } = window;
 
+// Clamp vertical look to ±75.6° — prevents flipping upside down.
 const PITCH_LIMIT = Math.PI * 0.42;
 
 // ── Logical camera state ──────────────────────────────────────────────────────
@@ -61,6 +62,8 @@ export function zoomIn(group) {
     group.getWorldPosition(worldPos);
   }
   const fwd       = new THREE.Vector3(0, 0, 1).applyQuaternion(group.quaternion);
+  // Zoom distances tuned so each device fills the viewport comfortably.
+  // Computer: 2.2 (smaller model), TV: 2.5, flat project panel: 3.6.
   const zoomDist  = isComputer ? 2.2 : isTelevision ? 2.5 : 3.6;
   const camTarget = worldPos.clone().addScaledVector(fwd, zoomDist);
 

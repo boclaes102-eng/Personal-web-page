@@ -11,7 +11,7 @@
  */
 
 import * as THREE         from 'three';
-import { scene }          from './renderer.js';
+import { scene }          from '../core/renderer.js';
 import { makeNebulaCanvas } from './environment.js';
 
 // ── Lore database ─────────────────────────────────────────────────────────────

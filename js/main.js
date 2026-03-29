@@ -3,12 +3,12 @@
  * Entry point — wires all modules together and runs the animation loop.
  */
 
-import { camera, composer }   from './renderer.js';
-import { cam, camDir }        from './camera.js';
-import { buildEnvironment, updateEnvironment } from './environment.js';
-import { buildCelestials, updateCelestials }   from './celestials.js';
-import { buildFrames, animateFrames }          from './frames.js';
-import { setupInput }                          from './input.js';
+import { camera, composer }   from './core/renderer.js';
+import { cam, camDir }        from './core/camera.js';
+import { buildEnvironment, updateEnvironment } from './scene/environment.js';
+import { buildCelestials, updateCelestials }   from './scene/celestials.js';
+import { buildFrames, animateFrames }          from './scene/frames.js';
+import { setupInput }                          from './core/input.js';
 
 // ── Animation loop ────────────────────────────────────────────────────────────
 let lastT = 0;

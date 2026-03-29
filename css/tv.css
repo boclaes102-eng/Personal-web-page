@@ -1,0 +1,412 @@
+/* ══════════════════════════════════════════════════════════
+   RETRO TV CHANNEL OVERLAY
+   ══════════════════════════════════════════════════════════ */
+:root {
+  --tv-bg:     #04050c;
+  --tv-ph:     #c8d8ff;             /* phosphor blue-white */
+  --tv-ph-dim: rgba(200,216,255,0.50);
+  --tv-ph-dk:  rgba(200,216,255,0.18);
+}
+
+.tv-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  background: var(--tv-bg);
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 15px;
+  color: var(--tv-ph);
+  transform-origin: center center;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.tv-scanlines {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.13) 2px,
+    rgba(0, 0, 0, 0.13) 3px
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+
+.tv-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, 0.88) 100%);
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Static-noise canvas — shown briefly between channels */
+.tv-static-cv {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 5;
+  display: none;
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+
+/* Inner layout — sits above all overlay layers */
+.tv-inner {
+  position: relative;
+  z-index: 4;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem 1.4rem 0.5rem;
+}
+
+/* ── Top bar ──────────────────────────────────────────────── */
+.tv-topbar {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  border-bottom: 1px solid var(--tv-ph-dk);
+  padding-bottom: 0.45rem;
+  margin-bottom: 0.55rem;
+  flex-shrink: 0;
+}
+
+.tv-ch-num {
+  font-weight: bold;
+  font-size: 1.05em;
+  letter-spacing: 0.08em;
+  min-width: 3.4rem;
+  text-shadow: 0 0 8px currentColor;
+}
+
+.tv-ch-name {
+  font-size: 0.88em;
+  letter-spacing: 0.14em;
+  font-weight: bold;
+  flex: 1;
+}
+
+.tv-nav-btn,
+.tv-exit-btn {
+  background: transparent;
+  border: 1px solid var(--tv-ph-dk);
+  color: var(--tv-ph-dim);
+  font-family: inherit;
+  font-size: 0.8em;
+  padding: 0.2rem 0.55rem;
+  cursor: pointer;
+  letter-spacing: 0.06em;
+  transition: color 0.14s, border-color 0.14s, background 0.14s;
+}
+.tv-exit-btn { margin-left: 0.4rem; }
+.tv-nav-btn:hover,
+.tv-exit-btn:hover {
+  color: var(--tv-bg);
+  background: var(--tv-ph);
+  border-color: var(--tv-ph);
+}
+
+/* ── Content area ─────────────────────────────────────────── */
+.tv-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* ── Nav hint ─────────────────────────────────────────────── */
+.tv-hint {
+  font-size: 0.68em;
+  color: var(--tv-ph-dk);
+  text-align: center;
+  padding: 0.35rem 0 0.15rem;
+  flex-shrink: 0;
+  letter-spacing: 0.04em;
+}
+
+/* ── Shared helpers ───────────────────────────────────────── */
+.tv-divider {
+  border: none;
+  border-top: 1px solid;
+  opacity: 0.35;
+  margin: 0.4rem 0;
+  flex-shrink: 0;
+}
+.tv-clock {
+  font-size: 0.82em;
+  color: var(--tv-ph-dim);
+  margin-left: auto;
+}
+.tv-subtext {
+  font-size: 0.70em;
+  color: var(--tv-ph-dk);
+  margin-top: auto;
+  padding-top: 0.4rem;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+.tv-section-lbl {
+  font-size: 0.76em;
+  letter-spacing: 0.15em;
+  color: var(--tv-ph-dim);
+  margin: 0.2rem 0 0.3rem;
+  flex-shrink: 0;
+}
+
+/* ── ① NEWS ───────────────────────────────────────────────── */
+.tv-news { display: flex; flex-direction: column; height: 100%; }
+
+.tv-news-hdr {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 0.3rem;
+  flex-shrink: 0;
+}
+.tv-live {
+  font-size: 0.72em;
+  font-weight: bold;
+  padding: 0.14rem 0.48rem;
+  color: #fff;
+  letter-spacing: 0.1em;
+  animation: tv-live-pulse 1.2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes tv-live-pulse { 0%,100%{opacity:1} 50%{opacity:0.55} }
+
+.tv-news-label {
+  font-size: 0.84em;
+  letter-spacing: 0.12em;
+  font-weight: bold;
+}
+.tv-headline {
+  font-size: clamp(1.05rem, 2.2vw, 1.5rem);
+  font-weight: bold;
+  line-height: 1.4;
+  color: var(--tv-ph);
+  text-shadow: 0 0 10px rgba(200, 216, 255, 0.38);
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0;
+}
+.tv-news-anchor {
+  font-size: 0.76em;
+  color: var(--tv-ph-dim);
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+  padding-bottom: 0.4rem;
+}
+.tv-ticker-wrap {
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  padding: 0.28rem 0;
+  flex-shrink: 0;
+}
+.tv-ticker-tag {
+  font-size: 0.70em;
+  font-weight: bold;
+  padding: 0.18rem 0.45rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  letter-spacing: 0.08em;
+}
+.tv-ticker-txt {
+  font-size: 0.76em;
+  white-space: nowrap;
+  animation: tv-ticker 40s linear infinite;
+  color: var(--tv-ph);
+  display: flex;
+  align-items: center;
+  padding-left: 1rem;
+}
+@keyframes tv-ticker { from{transform:translateX(0)} to{transform:translateX(-33.33%)} }
+
+/* ── ② WEATHER ────────────────────────────────────────────── */
+.tv-weather { display: flex; flex-direction: column; height: 100%; }
+
+.tv-wx-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-shrink: 0;
+}
+.tv-wx-city  { font-size: 1.35em; font-weight: bold; letter-spacing: 0.14em; }
+.tv-wx-date  { font-size: 0.78em; color: var(--tv-ph-dim); }
+
+.tv-wx-current {
+  display: flex;
+  align-items: center;
+  gap: 1.4rem;
+  padding: 0.65rem 0;
+  flex-shrink: 0;
+}
+.tv-wx-bigicon { font-size: 2.8rem; }
+.tv-wx-temp   { font-size: clamp(1.8rem, 4vw, 2.6rem); font-weight: bold; text-shadow: 0 0 12px rgba(200,216,255,0.45); }
+.tv-wx-c      { font-size: 0.54em; color: var(--tv-ph-dim); }
+.tv-wx-cond   { font-size: 0.9em; letter-spacing: 0.1em; color: var(--tv-ph-dim); }
+
+.tv-wx-details {
+  display: flex;
+  gap: 1.4rem;
+  font-size: 0.78em;
+  color: var(--tv-ph-dim);
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  padding-bottom: 0.2rem;
+}
+
+.tv-wx-forecast {
+  display: flex;
+  gap: 1.2rem;
+  padding: 0.4rem 0;
+  flex-shrink: 0;
+}
+.tv-wx-day  { display: flex; flex-direction: column; align-items: center; gap: 0.18rem; }
+.tv-wx-dn   { font-size: 0.76em; color: var(--tv-ph-dim); }
+.tv-wx-ic   { font-size: 1.4rem; }
+.tv-wx-hi   { font-size: 0.88em; font-weight: bold; }
+.tv-wx-lo   { font-size: 0.76em; color: var(--tv-ph-dim); }
+
+/* ── ③ MARKETS ────────────────────────────────────────────── */
+.tv-stocks { display: flex; flex-direction: column; height: 100%; }
+
+.tv-mkt-hdr {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-bottom: 0.25rem;
+}
+.tv-mkt-title { font-weight: bold; font-size: 0.95em; letter-spacing: 0.12em; }
+
+.tv-idx-block, .tv-stk-block { flex-shrink: 0; }
+
+.tv-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.22rem 0;
+  font-size: 0.86em;
+  border-bottom: 1px solid var(--tv-ph-dk);
+}
+.tv-idx-n  { font-weight: bold; min-width: 3.8rem; }
+.tv-idx-p  { flex: 1; }
+.tv-stk-s  { font-weight: bold; min-width: 3.4rem; }
+.tv-stk-n  { flex: 1; font-size: 0.88em; color: var(--tv-ph-dim); }
+.tv-stk-p  { min-width: 5rem; text-align: right; }
+
+/* ── ④ SPORTS ─────────────────────────────────────────────── */
+.tv-sports { display: flex; flex-direction: column; height: 100%; }
+
+.tv-spt-hdr {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-bottom: 0.25rem;
+}
+.tv-spt-title { font-weight: bold; letter-spacing: 0.12em; }
+
+.tv-games { display: flex; flex-direction: column; gap: 0.45rem; flex-shrink: 0; }
+
+.tv-game {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--tv-ph-dk);
+}
+.tv-game-lg    { font-weight: bold; font-size: 0.82em; min-width: 2.4rem; letter-spacing: 0.08em; }
+.tv-game-teams { flex: 1; display: flex; flex-direction: column; gap: 0.12rem; }
+.tv-team       { display: flex; justify-content: space-between; font-size: 0.86em; width: 100%; gap: 0.5rem; }
+.tv-score      { font-weight: bold; font-size: 1.08em; }
+.tv-game-st    { font-size: 0.73em; color: var(--tv-ph-dim); text-align: right; min-width: 4.2rem; }
+
+/* ── ⑤ TEST SIGNAL ────────────────────────────────────────── */
+.tv-test { display: flex; flex-direction: column; height: 100%; }
+
+.tv-bars {
+  display: flex;
+  height: 52%;
+  flex-shrink: 0;
+  border: 1px solid var(--tv-ph-dk);
+}
+.tv-bar {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 0.28rem;
+}
+.tv-bar span {
+  font-size: 0.58em;
+  color: rgba(0,0,0,0.65);
+  writing-mode: vertical-rl;
+  letter-spacing: 0.1em;
+  font-weight: bold;
+}
+.tv-test-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  text-align: center;
+}
+.tv-test-title {
+  font-size: 1.35em;
+  font-weight: bold;
+  letter-spacing: 0.28em;
+  text-shadow: 0 0 14px rgba(200,216,255,0.55);
+}
+.tv-test-sub  { font-size: 0.95em; letter-spacing: 0.2em; color: var(--tv-ph-dim); }
+.tv-test-time { font-size: 0.82em; color: var(--tv-ph-dim); margin-top: 0.25rem; }
+
+/* ── Loading & error states ───────────────────────────────── */
+.tv-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 100%;
+  font-size: 0.9em;
+  letter-spacing: 0.14em;
+  color: var(--tv-ph-dim);
+}
+.tv-blink {
+  animation: crt-blink 0.85s step-end infinite;
+}
+.tv-fetch-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  color: #ff4444;
+  font-size: 0.88em;
+  letter-spacing: 0.1em;
+  gap: 0.5rem;
+  line-height: 1.6;
+}
+.tv-err-detail {
+  font-size: 0.75em;
+  color: var(--tv-ph-dim);
+  letter-spacing: 0.04em;
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .tv-inner { padding: 0.45rem 0.65rem; }
+  .tv-overlay { font-size: 12px; }
+  .tv-wx-forecast { gap: 0.6rem; }
+}

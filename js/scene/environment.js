@@ -5,7 +5,7 @@
  */
 
 import * as THREE from 'three';
-import { scene }  from './renderer.js';
+import { scene }  from '../core/renderer.js';
 
 // Exported so main.js can pass t/dt each frame
 export let starUniforms = null;

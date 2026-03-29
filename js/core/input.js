@@ -9,12 +9,12 @@ import { camera, renderer, composer, hdrTarget, bloomPass } from './renderer.js'
 import { shared }                       from './state.js';
 import { cam, camDir, updateCameraMatrix,
          zoomIn, zoomToCelestial, zoomOut, PITCH_LIMIT } from './camera.js';
-import { frames, clickTargets }         from './frames.js';
-import { celestialTargets, celestialMeshes } from './celestials.js';
+import { frames, clickTargets }         from '../scene/frames.js';
+import { celestialTargets, celestialMeshes } from '../scene/celestials.js';
 
 const { gsap } = window;
 
-const DRAG_THRESH = 8; // px — below this a pointerup is a click
+const DRAG_THRESH = 8; // px — below this distance a pointerup counts as a click, not a drag
 
 const raycaster = new THREE.Raycaster();
 const ndcMouse  = new THREE.Vector2();
@@ -86,6 +86,8 @@ export function setupInput() {
     );
     if (isDragging && cam.mode === 'freelook') {
       dragDist = Math.hypot(e.clientX - pointerDownOrigin.x, e.clientY - pointerDownOrigin.y);
+      // 0.004 rad/px feels natural on a standard 1080p monitor at arm's length.
+      // Touch uses 0.005 because fingers move in shorter strokes than a mouse.
       cam.yaw  -= (e.clientX - lastDragX) * 0.004;
       cam.pitch = THREE.MathUtils.clamp(
         cam.pitch + (e.clientY - lastDragY) * 0.004,
