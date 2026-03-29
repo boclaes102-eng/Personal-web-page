@@ -1,0 +1,466 @@
+/* ══════════════════════════════════════════════════════════
+   ARCADE OVERLAY
+   Full-screen CRT-style arcade cabinet UI.
+   ══════════════════════════════════════════════════════════ */
+
+:root {
+  --arc-bg:      #05030f;
+  --arc-neon:    #ff44ff;       /* default neon — overridden per game via --game-color */
+  --arc-dim:     rgba(255, 68, 255, 0.45);
+  --arc-dk:      rgba(255, 68, 255, 0.15);
+  --arc-text:    #e8d0ff;
+  --arc-font:    'Courier New', Courier, monospace;
+}
+
+/* ── Overlay root ─────────────────────────────────────────── */
+#arcade-overlay {
+  position:        fixed;
+  inset:           0;
+  z-index:         950;
+  background:      var(--arc-bg);
+  display:         none;           /* shown via JS */
+  flex-direction:  column;
+  font-family:     var(--arc-font);
+  font-size:       15px;
+  color:           var(--arc-text);
+  transform-origin: center center;
+  overflow:        hidden;
+}
+
+/* ── CRT scanlines ────────────────────────────────────────── */
+.arc-scanlines {
+  position:        absolute;
+  inset:           0;
+  background:      repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.12) 2px,
+    rgba(0, 0, 0, 0.12) 3px
+  );
+  pointer-events:  none;
+  z-index:         2;
+}
+
+/* ── CRT vignette ────────────────────────────────────────── */
+.arc-vignette {
+  position:        absolute;
+  inset:           0;
+  background:      radial-gradient(ellipse at center, transparent 52%, rgba(0,0,0,0.92) 100%);
+  pointer-events:  none;
+  z-index:         3;
+}
+
+/* ── Inner layout (above overlay effects) ────────────────── */
+.arc-inner {
+  position:        relative;
+  z-index:         4;
+  height:          100%;
+  display:         flex;
+  flex-direction:  column;
+}
+
+/* ── Top bar ──────────────────────────────────────────────── */
+.arc-topbar {
+  display:         flex;
+  align-items:     center;
+  gap:             0.55rem;
+  padding:         0.55rem 1.2rem 0.45rem;
+  border-bottom:   1px solid var(--arc-dk);
+  flex-shrink:     0;
+}
+
+.arc-logo {
+  font-size:       1.10em;
+  font-weight:     bold;
+  letter-spacing:  0.22em;
+  color:           var(--arc-neon);
+  text-shadow:     0 0 12px var(--arc-neon);
+}
+
+.arc-exit-btn {
+  margin-left:     auto;
+  background:      transparent;
+  border:          1px solid var(--arc-dk);
+  color:           rgba(232, 208, 255, 0.55);
+  font-family:     inherit;
+  font-size:       0.80em;
+  padding:         0.20rem 0.55rem;
+  cursor:          pointer;
+  letter-spacing:  0.06em;
+  transition:      color 0.14s, border-color 0.14s, background 0.14s;
+}
+.arc-exit-btn:hover {
+  color:           var(--arc-bg);
+  background:      var(--arc-text);
+  border-color:    var(--arc-text);
+}
+
+/* ── Shared content area ──────────────────────────────────── */
+.arc-content {
+  flex:            1;
+  display:         flex;
+  flex-direction:  column;
+  min-height:      0;
+  overflow:        hidden;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SCREEN: MAIN MENU
+   ═══════════════════════════════════════════════════════════ */
+#arc-screen-menu {
+  flex-direction:  column;
+  align-items:     center;
+  justify-content: center;
+  gap:             0.8rem;
+  padding:         1.5rem 2rem;
+}
+
+.arc-menu-title {
+  font-size:       clamp(1.4rem, 3.5vw, 2.2rem);
+  font-weight:     bold;
+  letter-spacing:  0.30em;
+  color:           var(--arc-neon);
+  text-shadow:     0 0 22px var(--arc-neon);
+  margin-bottom:   0.4rem;
+  text-align:      center;
+}
+
+.arc-menu-sub {
+  font-size:       0.78em;
+  letter-spacing:  0.16em;
+  color:           rgba(232, 208, 255, 0.40);
+  margin-bottom:   1.2rem;
+  text-align:      center;
+}
+
+#arc-menu-list {
+  display:         flex;
+  flex-direction:  column;
+  gap:             0.55rem;
+  width:           100%;
+  max-width:       620px;
+}
+
+.arc-menu-item {
+  display:         flex;
+  align-items:     center;
+  gap:             0.80rem;
+  padding:         0.70rem 1.2rem;
+  border:          1px solid rgba(255, 68, 255, 0.18);
+  cursor:          pointer;
+  transition:      border-color 0.15s, background 0.15s;
+}
+.arc-menu-item.selected,
+.arc-menu-item:hover {
+  border-color:    var(--game-color, var(--arc-neon));
+  background:      rgba(255, 68, 255, 0.08);
+}
+
+.arc-cursor {
+  color:           var(--game-color, var(--arc-neon));
+  font-size:       1.20em;
+  font-weight:     bold;
+  visibility:      hidden;
+  flex-shrink:     0;
+}
+.arc-menu-item.selected .arc-cursor,
+.arc-menu-item:hover    .arc-cursor {
+  visibility:      visible;
+  text-shadow:     0 0 10px var(--game-color, var(--arc-neon));
+}
+
+.arc-game-label {
+  font-size:       1.15em;
+  font-weight:     bold;
+  letter-spacing:  0.18em;
+  color:           var(--game-color, var(--arc-text));
+  text-shadow:     0 0 8px var(--game-color, transparent);
+  min-width:       7rem;
+  flex-shrink:     0;
+}
+
+.arc-game-desc {
+  font-size:       0.72em;
+  color:           rgba(232, 208, 255, 0.45);
+  letter-spacing:  0.06em;
+}
+
+.arc-menu-hint {
+  font-size:       0.68em;
+  color:           rgba(232, 208, 255, 0.28);
+  letter-spacing:  0.08em;
+  margin-top:      1rem;
+  text-align:      center;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SCREEN: GAME CANVAS
+   ═══════════════════════════════════════════════════════════ */
+#arc-screen-game {
+  flex:            1;
+  align-items:     center;
+  justify-content: center;
+  position:        relative;
+  padding:         0;
+}
+
+#arc-canvas {
+  display:         block;
+  width:           100%;
+  height:          100%;
+  image-rendering: pixelated;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SCREEN: GAME OVER / NAME ENTRY
+   ═══════════════════════════════════════════════════════════ */
+#arc-screen-gameover {
+  flex-direction:  column;
+  align-items:     center;
+  justify-content: center;
+  gap:             1.0rem;
+  padding:         2rem;
+}
+
+#arc-go-color {
+  display:         contents;  /* transparent wrapper for --game-color propagation */
+}
+
+.arc-go-title {
+  font-size:       clamp(2rem, 6vw, 3.5rem);
+  font-weight:     bold;
+  letter-spacing:  0.25em;
+  color:           #ff4444;
+  text-shadow:     0 0 28px #ff4444;
+  animation:       arc-blink 0.8s step-end infinite;
+}
+
+@keyframes arc-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+.arc-go-gamename {
+  font-size:       1.10em;
+  letter-spacing:  0.20em;
+  color:           var(--game-color, var(--arc-neon));
+  text-shadow:     0 0 10px var(--game-color, var(--arc-neon));
+}
+
+.arc-go-score-row {
+  font-size:       clamp(1.2rem, 3vw, 1.9rem);
+  letter-spacing:  0.14em;
+  color:           var(--arc-text);
+}
+
+.arc-go-score-row span {
+  color:           var(--game-color, var(--arc-neon));
+  text-shadow:     0 0 14px var(--game-color, var(--arc-neon));
+  font-weight:     bold;
+}
+
+.arc-name-row {
+  display:         flex;
+  flex-direction:  column;
+  align-items:     center;
+  gap:             0.55rem;
+  margin-top:      0.5rem;
+}
+
+.arc-name-label {
+  font-size:       0.85em;
+  letter-spacing:  0.20em;
+  color:           rgba(232, 208, 255, 0.60);
+}
+
+#arc-name-input {
+  background:      rgba(255, 68, 255, 0.08);
+  border:          1px solid var(--arc-neon);
+  color:           var(--arc-text);
+  font-family:     inherit;
+  font-size:       1.25em;
+  padding:         0.35rem 1.0rem;
+  text-align:      center;
+  letter-spacing:  0.18em;
+  outline:         none;
+  width:           16rem;
+  max-width:       90vw;
+  caret-color:     var(--arc-neon);
+}
+#arc-name-input:focus {
+  border-color:    var(--arc-text);
+  box-shadow:      0 0 12px rgba(255, 68, 255, 0.35);
+}
+
+.arc-go-btns {
+  display:         flex;
+  gap:             0.8rem;
+  flex-wrap:       wrap;
+  justify-content: center;
+}
+
+.arc-btn {
+  background:      transparent;
+  border:          1px solid var(--arc-dk);
+  color:           rgba(232, 208, 255, 0.60);
+  font-family:     inherit;
+  font-size:       0.85em;
+  padding:         0.35rem 1.0rem;
+  letter-spacing:  0.12em;
+  cursor:          pointer;
+  transition:      all 0.15s;
+}
+.arc-btn.primary {
+  border-color:    var(--game-color, var(--arc-neon));
+  color:           var(--game-color, var(--arc-neon));
+}
+.arc-btn:hover {
+  background:      rgba(255, 255, 255, 0.10);
+  border-color:    var(--arc-text);
+  color:           var(--arc-text);
+}
+
+#arc-submit-msg {
+  font-size:       0.75em;
+  color:           #ff8844;
+  letter-spacing:  0.10em;
+  min-height:      1.2em;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SCREEN: LEADERBOARD
+   ═══════════════════════════════════════════════════════════ */
+#arc-screen-lb {
+  flex-direction:  column;
+  padding:         1.0rem 1.4rem;
+  gap:             0.6rem;
+  overflow:        hidden;
+}
+
+#arc-lb-color {
+  display:         contents;
+}
+
+.arc-lb-header {
+  display:         flex;
+  align-items:     center;
+  gap:             0.8rem;
+  flex-shrink:     0;
+  border-bottom:   1px solid var(--arc-dk);
+  padding-bottom:  0.5rem;
+}
+
+#arc-lb-title {
+  font-size:       1.0em;
+  font-weight:     bold;
+  letter-spacing:  0.20em;
+  color:           var(--game-color, var(--arc-neon));
+  text-shadow:     0 0 10px var(--game-color, var(--arc-neon));
+  flex:            1;
+}
+
+/* Game tabs */
+.arc-lb-tabs {
+  display:         flex;
+  gap:             0.4rem;
+  flex-shrink:     0;
+  flex-wrap:       wrap;
+}
+
+.arc-lb-tab {
+  background:      transparent;
+  border:          1px solid rgba(232, 208, 255, 0.18);
+  color:           rgba(232, 208, 255, 0.45);
+  font-family:     inherit;
+  font-size:       0.75em;
+  padding:         0.18rem 0.55rem;
+  cursor:          pointer;
+  letter-spacing:  0.10em;
+  transition:      all 0.14s;
+}
+.arc-lb-tab.active,
+.arc-lb-tab:hover {
+  border-color:    var(--arc-text);
+  color:           var(--arc-text);
+  background:      rgba(255, 255, 255, 0.06);
+}
+
+/* Table */
+.arc-lb-cols {
+  display:         flex;
+  gap:             0.5rem;
+  font-size:       0.72em;
+  color:           rgba(232, 208, 255, 0.38);
+  letter-spacing:  0.14em;
+  padding:         0 0.4rem;
+  flex-shrink:     0;
+}
+.arc-lb-cols span:first-child  { min-width: 3.2rem; }
+.arc-lb-cols span:nth-child(2) { flex: 1; }
+.arc-lb-cols span:last-child   { min-width: 6rem; text-align: right; }
+
+#arc-lb-body {
+  display:         flex;
+  flex-direction:  column;
+  gap:             0.28rem;
+  flex:            1;
+  overflow-y:      auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,68,255,0.3) transparent;
+}
+
+.arc-lb-row {
+  display:         flex;
+  align-items:     center;
+  gap:             0.5rem;
+  padding:         0.38rem 0.4rem;
+  border:          1px solid rgba(255, 68, 255, 0.10);
+  font-size:       0.90em;
+  transition:      background 0.12s;
+}
+.arc-lb-row.highlight {
+  border-color:    var(--game-color, var(--arc-neon));
+  background:      rgba(255, 68, 255, 0.10);
+  box-shadow:      0 0 12px rgba(255, 68, 255, 0.18);
+}
+.arc-lb-rank  { min-width: 3.2rem; font-size: 0.92em; }
+.arc-lb-name  { flex: 1; letter-spacing: 0.08em; font-weight: bold; }
+.arc-lb-score {
+  min-width:       6rem;
+  text-align:      right;
+  font-weight:     bold;
+  color:           var(--game-color, var(--arc-neon));
+}
+
+.arc-lb-loading,
+.arc-lb-error,
+.arc-lb-empty {
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  text-align:      center;
+  height:          8rem;
+  font-size:       0.85em;
+  letter-spacing:  0.12em;
+  color:           rgba(232, 208, 255, 0.45);
+  flex-direction:  column;
+  gap:             0.5rem;
+  line-height:     1.6;
+}
+.arc-lb-error { color: #ff6644; }
+.arc-lb-error small { color: rgba(232, 208, 255, 0.35); font-size: 0.80em; }
+
+.arc-lb-footer {
+  display:         flex;
+  gap:             0.7rem;
+  justify-content: center;
+  flex-shrink:     0;
+  padding-top:     0.5rem;
+  border-top:      1px solid var(--arc-dk);
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 480px) {
+  #arcade-overlay { font-size: 12px; }
+  .arc-topbar     { padding: 0.4rem 0.7rem; }
+  #arc-screen-menu { padding: 1rem; }
+  .arc-game-desc  { display: none; }
+}

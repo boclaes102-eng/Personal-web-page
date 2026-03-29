@@ -12,6 +12,7 @@ import { showOverlay, hideOverlay,
          showLore,    hideLore }               from './overlay.js';
 import { showTerminal, hideTerminal }          from '../pc/terminal.js';
 import { showTV, hideTV }                      from '../tv/tv-channels.js';
+import { showArcade, hideArcade }              from '../arcade/arcade-ui.js';
 
 const { gsap } = window;
 
@@ -53,18 +54,20 @@ export function zoomIn(group) {
 
   const isComputer    = !!group.userData.isComputer;
   const isTelevision  = !!group.userData.isTelevision;
+  const isArcade      = !!group.userData.isArcade;
   const worldPos      = new THREE.Vector3();
-  // For the computer and TV, target the screen mesh so the camera centres
-  // on the actual display rather than the group's geometric midpoint.
-  if ((isComputer || isTelevision) && group.userData.screenMesh) {
+  // For the computer, TV and arcade, target the screen mesh so the camera
+  // centres on the display rather than the group's geometric midpoint.
+  if ((isComputer || isTelevision || isArcade) && group.userData.screenMesh) {
     group.userData.screenMesh.getWorldPosition(worldPos);
   } else {
     group.getWorldPosition(worldPos);
   }
   const fwd       = new THREE.Vector3(0, 0, 1).applyQuaternion(group.quaternion);
   // Zoom distances tuned so each device fills the viewport comfortably.
-  // Computer: 2.2 (smaller model), TV: 2.5, flat project panel: 3.6.
-  const zoomDist  = isComputer ? 2.2 : isTelevision ? 2.5 : 3.6;
+  // Arcade: 2.8 (tall cabinet needs slightly more distance), Computer: 2.2,
+  // TV: 2.5, flat project panel: 3.6.
+  const zoomDist  = isArcade ? 2.8 : isComputer ? 2.2 : isTelevision ? 2.5 : 3.6;
   const camTarget = worldPos.clone().addScaledVector(fwd, zoomDist);
 
   const tl = gsap.timeline({
@@ -76,6 +79,9 @@ export function zoomIn(group) {
       } else if (isTelevision) {
         _currentZoomType = 'television';
         showTV(() => zoomOut());
+      } else if (isArcade) {
+        _currentZoomType = 'arcade';
+        showArcade(() => zoomOut());
       } else {
         _currentZoomType = 'project';
         showOverlay(group.userData.proj);
@@ -132,6 +138,8 @@ export function zoomOut() {
     hideTerminal(_doZoomOut);
   } else if (_currentZoomType === 'television') {
     hideTV(_doZoomOut);
+  } else if (_currentZoomType === 'arcade') {
+    hideArcade(_doZoomOut);
   } else {
     if (_currentZoomType === 'celestial') hideLore(); else hideOverlay();
     _doZoomOut();

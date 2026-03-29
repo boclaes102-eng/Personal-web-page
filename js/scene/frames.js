@@ -14,7 +14,8 @@ import * as THREE from 'three';
 import { scene }  from '../core/renderer.js';
 import { PROJECTS } from '../projects.js';
 import { buildComputer }    from '../pc/computer.js';
-import { buildTelevision } from '../tv/television.js';
+import { buildTelevision }  from '../tv/television.js';
+import { buildArcade }      from '../arcade/arcade-machine.js';
 
 // Flat panel size in Three.js world units (matches the canvas aspect ratio 4:3).
 const FRAME_W = 3.2;
@@ -33,6 +34,7 @@ const FRAME_POLAR = [
   [195,  -5,  13],  // project 3 — behind-left, slightly down
   [258,   7,  14],  // project 4 — left, slightly up
   [318,  -4,  12],  // project 5 — left-forward, slightly down, closest
+  [160,  -3,  13],  // project 6 — right-back, slightly down (arcade cabinet)
 ];
 
 export const frames       = [];
@@ -199,6 +201,26 @@ export function buildFrames() {
         floatPhase: Math.random() * Math.PI * 2,
         floatAmp:   0.28 + Math.random() * 0.10,
         floatSpeed: 0.14 + Math.random() * 0.08,
+      });
+      clickTarget.userData.frameGroup = group;
+      clickTargets.push(clickTarget);
+      scene.add(group);
+      frames.push(group);
+      return;
+    }
+
+    // ── Arcade cabinet variant ────────────────────────────────────────────────
+    if (proj.arcade) {
+      const { group, clickTarget } = buildArcade(proj);
+      group.position.copy(wp);
+      group.lookAt(0, 0, 0);
+      // Arcade cabinet floats with a heavier, slower motion — it feels bulky.
+      Object.assign(group.userData, {
+        baseQuat:   group.quaternion.clone(),
+        baseY:      wp.y,
+        floatPhase: Math.random() * Math.PI * 2,
+        floatAmp:   0.18 + Math.random() * 0.08,  // 0.18–0.26 world units
+        floatSpeed: 0.12 + Math.random() * 0.06,  // 0.12–0.18 rad/s — heavy feel
       });
       clickTarget.userData.frameGroup = group;
       clickTargets.push(clickTarget);

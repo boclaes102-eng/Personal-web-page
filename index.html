@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="css/main.css" />
   <link rel="stylesheet" href="css/pc.css" />
   <link rel="stylesheet" href="css/tv.css" />
+  <link rel="stylesheet" href="css/arcade.css" />
 </head>
 <body>
 
@@ -63,6 +64,78 @@
     <p class="lore-desc"></p>
     <ul class="lore-stats"></ul>
   </div>
+
+  <!-- ── Arcade overlay ────────────────────────────────────── -->
+  <div id="arcade-overlay">
+    <div class="arc-scanlines"></div>
+    <div class="arc-vignette"></div>
+    <div class="arc-inner">
+
+      <!-- Top bar -->
+      <div class="arc-topbar">
+        <span class="arc-logo">⬡ ARCADE</span>
+        <button class="arc-exit-btn" id="arc-exit-btn">ESC / EXIT</button>
+      </div>
+
+      <!-- Content area -->
+      <div class="arc-content">
+
+        <!-- ① Main menu -->
+        <div id="arc-screen-menu" style="display:none">
+          <div class="arc-menu-title">SELECT GAME</div>
+          <div class="arc-menu-sub">INSERT COIN TO PLAY</div>
+          <div id="arc-menu-list"></div>
+          <div class="arc-menu-hint">↑ ↓ TO SELECT &nbsp;·&nbsp; ENTER / CLICK TO START &nbsp;·&nbsp; ESC TO EXIT</div>
+        </div>
+
+        <!-- ② Game canvas -->
+        <div id="arc-screen-game" style="display:none">
+          <canvas id="arc-canvas"></canvas>
+        </div>
+
+        <!-- ③ Game over / name entry -->
+        <div id="arc-screen-gameover" style="display:none">
+          <div id="arc-go-color">
+            <div class="arc-go-title">GAME OVER</div>
+            <div class="arc-go-gamename" id="arc-go-game"></div>
+            <div class="arc-go-score-row">FINAL SCORE &nbsp; <span id="arc-go-score">0</span></div>
+            <div class="arc-name-row">
+              <label class="arc-name-label" for="arc-name-input">ENTER YOUR NAME</label>
+              <input id="arc-name-input" type="text" placeholder="YOUR NAME" autocomplete="off" spellcheck="false" />
+              <div id="arc-submit-msg"></div>
+            </div>
+            <div class="arc-go-btns">
+              <button id="arc-submit-btn" class="arc-btn primary">SUBMIT SCORE</button>
+              <button id="arc-skip-btn"   class="arc-btn">SKIP</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ④ Leaderboard -->
+        <div id="arc-screen-lb" style="display:none">
+          <div id="arc-lb-color">
+            <div class="arc-lb-header">
+              <span id="arc-lb-title">HALL OF FAME</span>
+              <div class="arc-lb-tabs">
+                <button class="arc-lb-tab" data-game="pong">PONG</button>
+                <button class="arc-lb-tab" data-game="galaga">GALAGA</button>
+                <button class="arc-lb-tab" data-game="breakout">BREAKOUT</button>
+              </div>
+            </div>
+            <div class="arc-lb-cols">
+              <span>RANK</span><span>NAME</span><span>SCORE</span>
+            </div>
+            <div id="arc-lb-body"></div>
+            <div class="arc-lb-footer">
+              <button id="arc-lb-again" class="arc-btn primary">PLAY AGAIN</button>
+              <button id="arc-lb-back"  class="arc-btn">MENU</button>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /.arc-content -->
+    </div><!-- /.arc-inner -->
+  </div><!-- /#arcade-overlay -->
 
   <!-- GSAP — loaded before the module so window.gsap is ready -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>

@@ -75,6 +75,12 @@ export const PROJECTS = [
     link: "#"
   },
   {
+    id: 6,
+    arcade: true,            // renders as a 3D retro arcade cabinet in the scene
+    title: "Arcade",
+    glowColor: "#ff44ff",    // neon magenta
+  },
+  {
     id: 5,
     title: "Project Zeta",
     description:
