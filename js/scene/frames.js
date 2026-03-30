@@ -28,13 +28,9 @@ const FRAME_H = 2.4;
 // Frames are spread around the full 360° with slight vertical variation so they
 // never perfectly overlap and the scene feels like a real 3D space.
 const FRAME_POLAR = [
-  [  0,   5,  14],  // project 0 — straight ahead, slightly up
-  [ 62,  -6,  13],  // project 1 — right, slightly down
-  [128,   8,  15],  // project 2 — right-back, slightly up, furthest
-  [195,  -5,  13],  // project 3 — behind-left, slightly down
-  [258,   7,  14],  // project 4 — left, slightly up
-  [318,  -4,  12],  // project 5 — left-forward, slightly down, closest
-  [160,  -3,  13],  // project 6 — right-back, slightly down (arcade cabinet)
+  [  0,   5,  14],  // project 0 — straight ahead (computer)
+  [ 80,  -5,  13],  // project 1 — right (television)
+  [248,   5,  11],  // project 2 — left, closer (arcade cabinet)
 ];
 
 export const frames       = [];

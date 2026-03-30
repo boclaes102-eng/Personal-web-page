@@ -11,6 +11,8 @@
  *   Mouse movement          — moves paddle (while pointer is over canvas)
  */
 
+import { sfx } from '../../audio/audio-manager.js';
+
 export function startBreakout(canvas, onGameOver) {
   const ctx = canvas.getContext('2d');
   const W   = canvas.width;
@@ -23,6 +25,12 @@ export function startBreakout(canvas, onGameOver) {
   const PAD_SPD = W * 0.008;               // key-controlled speed
 
   const BALL_R  = Math.round(H * 0.014);   // ~7 px
+
+  // Ball speed progression (pixels/frame at 60 fps)
+  const BALL_SPD_INIT  = W * 0.005;   // slow start — feels manageable
+  const BALL_SPD_MAX   = W * 0.015;   // hard cap — fast but fair
+  const BALL_SPD_BRICK = W * 0.0002;  // gained per brick destroyed
+  const BALL_SPD_PAD   = W * 0.0003;  // gained every 4th paddle bounce
 
   // Brick grid: 10 cols × 6 rows
   const COLS      = 10;
@@ -57,6 +65,9 @@ export function startBreakout(canvas, onGameOver) {
   let level = 1;
   let gameOver = false;
   let rafId;
+
+  let ballSpeed  = BALL_SPD_INIT;  // current ball speed — increases as bricks are hit
+  let paddleHits = 0;              // counts paddle bounces; every 4th adds a speed tick
 
   const keys = new Set();
   const onKey  = e => {
@@ -105,11 +116,9 @@ export function startBreakout(canvas, onGameOver) {
   function resetBall() {
     bx = padX + PAD_W / 2;
     by = PAD_Y - BALL_R - 2;
-    // Speed increases slightly each level: 6 + 0.4 per level
-    const spd  = Math.min(W * (0.0075 + (level - 1) * 0.0005), W * 0.013);
     const angle = -Math.PI / 2 + (Math.random() * 0.6 - 0.3);  // mostly upward ±17°
-    vx = spd * Math.cos(angle);
-    vy = spd * Math.sin(angle);
+    vx = ballSpeed * Math.cos(angle);
+    vy = ballSpeed * Math.sin(angle);
     launched = false;
   }
 
@@ -248,22 +257,27 @@ export function startBreakout(canvas, onGameOver) {
     by += vy;
 
     // Wall bounce (left / right)
-    if (bx - BALL_R < 0)  { bx = BALL_R;     vx =  Math.abs(vx); }
-    if (bx + BALL_R > W)  { bx = W - BALL_R; vx = -Math.abs(vx); }
+    if (bx - BALL_R < 0)  { bx = BALL_R;     vx =  Math.abs(vx); sfx('breakout-wall'); }
+    if (bx + BALL_R > W)  { bx = W - BALL_R; vx = -Math.abs(vx); sfx('breakout-wall'); }
     // Top wall
-    if (by - BALL_R < 0)  { by = BALL_R;     vy =  Math.abs(vy); }
+    if (by - BALL_R < 0)  { by = BALL_R;     vy =  Math.abs(vy); sfx('breakout-wall'); }
 
     // Paddle collision
     if (vy > 0
         && bx >= padX - BALL_R && bx <= padX + PAD_W + BALL_R
         && by + BALL_R >= PAD_Y && by - BALL_R <= PAD_Y + PAD_H) {
       by = PAD_Y - BALL_R;
+      sfx('breakout-paddle');
+      // Every 4th paddle bounce nudges the speed up slightly (classic Breakout feel)
+      paddleHits++;
+      if (paddleHits % 4 === 0) {
+        ballSpeed = Math.min(ballSpeed + BALL_SPD_PAD, BALL_SPD_MAX);
+      }
       // Angle depends on where on paddle it hits: centre=straight up, edges=steep
       const rel = ((bx - padX) / PAD_W) * 2 - 1;  // -1 (left) to +1 (right)
       const angle = rel * (Math.PI * 0.38);          // max ±68° from straight up
-      const spd   = Math.hypot(vx, vy);
-      vx = spd * Math.sin(angle);
-      vy = -Math.abs(spd * Math.cos(angle));
+      vx = ballSpeed * Math.sin(angle);
+      vy = -Math.abs(ballSpeed * Math.cos(angle));
     }
 
     // Brick collision — check all alive bricks
@@ -294,6 +308,9 @@ export function startBreakout(canvas, onGameOver) {
         b.hp--;
         score += b.pts * level;   // level multiplier
         spawnPop(b.x + BRICK_W / 2, b.y + BRICK_H / 2, b.color);
+        ballSpeed = Math.min(ballSpeed + BALL_SPD_BRICK, BALL_SPD_MAX);
+        // Top rows (gold) = highest pitch; bottom row (green) = lowest
+        sfx('breakout-brick', { pitch: [880, 760, 660, 580, 500, 440][r] });
 
         break outer;  // one brick per frame prevents tunnelling through thin gaps
       }
@@ -305,6 +322,10 @@ export function startBreakout(canvas, onGameOver) {
       if (lives <= 0) {
         gameOver = true;
       } else {
+        sfx('breakout-life-lost');
+        // Speed resets on life loss — gives the player a breather (classic Breakout)
+        ballSpeed  = BALL_SPD_INIT;
+        paddleHits = 0;
         resetBall();
       }
     }
@@ -316,11 +337,13 @@ export function startBreakout(canvas, onGameOver) {
       return p.life > 0;
     });
 
-    // Level clear — rebuild bricks
+    // Level clear — rebuild bricks; keep earned ball speed, reset paddle-hit counter
     if (bricks.every(row => row.every(b => b.hp <= 0))) {
+      sfx('breakout-level-clear');
       level++;
       score += 2000;
       buildBricks();
+      paddleHits = 0;
       resetBall();
     }
   }

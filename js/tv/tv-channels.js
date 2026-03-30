@@ -15,7 +15,7 @@
  *   hideTV(onComplete)
  */
 
-'use strict';
+import { sfx } from '../audio/audio-manager.js';
 
 const { gsap } = window;
 
@@ -90,6 +90,7 @@ async function _ipGeo() {
 export function showTV(onClose) {
   _onClose = onClose;
   _curIdx  = 0;
+  sfx('tv-enter');
   _startLocation();   // kick off location fetch in background
   _build();
   gsap.fromTo(_overlay,
@@ -100,6 +101,7 @@ export function showTV(onClose) {
 }
 
 export function hideTV(onComplete) {
+  sfx('tv-exit');
   _clearLive();
   document.removeEventListener('keydown', _onKey);
   gsap.to(_overlay, {
@@ -173,6 +175,7 @@ function _onKey(e) {
 function _changeChannel(dir) { _switchTo((_curIdx + dir + CHANNELS.length) % CHANNELS.length); }
 function _switchTo(idx) {
   if (idx === _curIdx) return;
+  sfx('tv-channel');
   _clearLive(); _curIdx = idx;
   _staticFlash(() => _renderChannel(idx));
 }

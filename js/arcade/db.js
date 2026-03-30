@@ -38,26 +38,29 @@
  *  CREATE POLICY "public_read" ON arcade_scores
  *    FOR SELECT USING (true);
  *
- *  CREATE POLICY "public_insert" ON arcade_scores
- *    FOR INSERT WITH CHECK (
- *      char_length(player_name) BETWEEN 1 AND 20
- *      AND score >= 0
- *    );
+ *  -- Run this in SQL Editor to link scores to authenticated users:
+ *  ALTER TABLE arcade_scores
+ *    ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL;
+ *
+ *  -- Require authentication to insert (replaces the open public_insert policy)
+ *  DROP POLICY IF EXISTS "public_insert" ON arcade_scores;
+ *  CREATE POLICY "auth_insert" ON arcade_scores
+ *    FOR INSERT WITH CHECK (auth.uid() IS NOT NULL AND score >= 0);
  *
  * ───────────────────────────────────────────────────────────────────
  */
 
-const SUPABASE_URL = 'https://iequlhfuqkqjaxxqsijd.supabase.co';
+import { getAccessToken, getCurrentUser } from '../auth/auth.js';
 
-// ↓ Replace with your project's anon/public key:
-//   Supabase Dashboard → Settings → API → "anon public"
+const SUPABASE_URL      = 'https://iequlhfuqkqjaxxqsijd.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImllcXVsaGZ1cWtxamF4eHFzaWpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2NDA4ODQsImV4cCI6MjA5MDIxNjg4NH0.4zP_KVcsMzoT3bon8tlC5GUKTRC9i3vohuCTtq-Htx8';
 
-/** Shared headers for all REST requests */
+/** Shared headers — uses the user's auth token when available for RLS */
 function headers() {
+  const token = getAccessToken();
   return {
     'apikey':        SUPABASE_ANON_KEY,
-    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+    'Authorization': `Bearer ${token ?? SUPABASE_ANON_KEY}`,
     'Content-Type':  'application/json',
   };
 }
@@ -70,10 +73,14 @@ function headers() {
  * @returns {Promise<void>}    Rejects if the request fails
  */
 export async function submitScore(playerName, game, score) {
+  const user    = getCurrentUser();
+  const payload = { player_name: playerName, game, score };
+  if (user?.id) payload.user_id = user.id;   // link score to the auth user for RLS
+
   const res = await fetch(`${SUPABASE_URL}/rest/v1/arcade_scores`, {
     method:  'POST',
     headers: { ...headers(), 'Prefer': 'return=minimal' },
-    body:    JSON.stringify({ player_name: playerName, game, score }),
+    body:    JSON.stringify(payload),
   });
   if (!res.ok) {
     const detail = await res.text().catch(() => String(res.status));

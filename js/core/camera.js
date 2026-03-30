@@ -13,6 +13,7 @@ import { showOverlay, hideOverlay,
 import { showTerminal, hideTerminal }          from '../pc/terminal.js';
 import { showTV, hideTV }                      from '../tv/tv-channels.js';
 import { showArcade, hideArcade }              from '../arcade/arcade-ui.js';
+import { sfx, duckMusic, unduckMusic }         from '../audio/audio-manager.js';
 
 const { gsap } = window;
 
@@ -45,6 +46,7 @@ export function updateCameraMatrix() {
 
 // ── Zoom in to a project frame ────────────────────────────────────────────────
 export function zoomIn(group) {
+  sfx('zoom-in');
   cam.mode = 'transitioning';
   cam.savedYaw   = cam.yaw;
   cam.savedPitch = cam.pitch;
@@ -75,12 +77,15 @@ export function zoomIn(group) {
       cam.mode = 'zoomed';
       if (isComputer) {
         _currentZoomType = 'computer';
+        duckMusic();
         showTerminal(() => zoomOut());
       } else if (isTelevision) {
         _currentZoomType = 'television';
+        duckMusic();
         showTV(() => zoomOut());
       } else if (isArcade) {
         _currentZoomType = 'arcade';
+        duckMusic();
         showArcade(() => zoomOut());
       } else {
         _currentZoomType = 'project';
@@ -147,6 +152,8 @@ export function zoomOut() {
 }
 
 function _doZoomOut() {
+  sfx('zoom-out');
+  unduckMusic();
   const restoredTarget = new THREE.Vector3(
      Math.sin(cam.savedYaw)  * Math.cos(cam.savedPitch),
      Math.sin(cam.savedPitch),

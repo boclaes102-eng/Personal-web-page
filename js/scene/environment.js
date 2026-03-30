@@ -249,4 +249,4 @@ export function updateEnvironment(t, dt) {
   comet.update(dt);
 }
 
-export { makeNebulaCanvas }; // celestials.js reuses it for corona sprites
+// makeNebulaCanvas is already exported via its function declaration above

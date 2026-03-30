@@ -76,19 +76,12 @@ body.hovering  { cursor: pointer;  }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  pointer-events: none;
+  pointer-events: none;   /* canvas drag still works everywhere */
   z-index: 10;
   transition: opacity 0.4s ease;
 }
 
-#header.hidden { opacity: 0; }
-
-.site-name {
-  font-size: clamp(0.95rem, 2.2vw, 1.3rem);
-  letter-spacing: 0.3em;
-  color: #fff;
-  text-shadow: 0 0 14px rgba(100,180,255,0.55);
-}
+#header.hidden { opacity: 0; pointer-events: none !important; }
 
 .hint {
   font-size: 0.68rem;

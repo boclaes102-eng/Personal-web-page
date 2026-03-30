@@ -11,6 +11,8 @@ import { startPong }     from './games/pong.js';
 import { startGalaga }   from './games/galaga.js';
 import { startBreakout } from './games/breakout.js';
 import { submitScore, getLeaderboard } from './db.js';
+import { sfx } from '../audio/audio-manager.js';
+import { getCurrentUser } from '../auth/auth.js';
 
 const { gsap } = window;
 
@@ -51,6 +53,7 @@ const el = id => $(id);
 
 // ── Show / hide overlay with CRT power animation ─────────────────────────────
 export function showArcade(onClose) {
+  sfx('arcade-enter');
   _onClose = onClose;
   const overlay = el('arcade-overlay');
   overlay.style.display = 'flex';
@@ -70,6 +73,7 @@ export function showArcade(onClose) {
 }
 
 export function hideArcade(callback) {
+  sfx('arcade-exit');
   _stopCurrentGame();
   const overlay = el('arcade-overlay');
   // CRT power-off: shrink to a horizontal line then fade
@@ -126,29 +130,39 @@ function _attachMenuKeys() {
   _detachMenuKeys();
   _menuKeyListener = e => {
     if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+      e.stopImmediatePropagation();
+      sfx('arcade-menu-move');
       _menuCursor = (_menuCursor - 1 + GAMES.length) % GAMES.length;
       _renderMenu();
     } else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+      e.stopImmediatePropagation();
+      sfx('arcade-menu-move');
       _menuCursor = (_menuCursor + 1) % GAMES.length;
       _renderMenu();
     } else if (e.key === 'Enter' || e.key === ' ') {
+      e.stopImmediatePropagation();
       _launchGame(GAMES[_menuCursor]);
     } else if (e.key === 'Escape') {
+      // Capture + stopImmediatePropagation prevents input.js from also calling zoomOut()
+      e.stopImmediatePropagation();
+      _detachMenuKeys();  // prevent re-entry if user spams ESC during the exit animation
       hideArcade(_onClose);
     }
   };
-  window.addEventListener('keydown', _menuKeyListener);
+  // Use capture phase so this fires before input.js's bubble-phase listener
+  window.addEventListener('keydown', _menuKeyListener, true);
 }
 
 function _detachMenuKeys() {
   if (_menuKeyListener) {
-    window.removeEventListener('keydown', _menuKeyListener);
+    window.removeEventListener('keydown', _menuKeyListener, true);
     _menuKeyListener = null;
   }
 }
 
 // ── Game launch ───────────────────────────────────────────────────────────────
 function _launchGame(gameDef) {
+  sfx('arcade-menu-select');
   _detachMenuKeys();
   _currentGameId = gameDef.id;
 
@@ -167,15 +181,17 @@ function _launchGame(gameDef) {
     _showGameOver(gameDef, score);
   });
 
-  // ESC exits game back to menu
+  // ESC returns to menu (not out of arcade).
+  // Capture phase + stopImmediatePropagation prevents input.js from seeing ESC.
   const escListener = e => {
     if (e.key === 'Escape') {
-      window.removeEventListener('keydown', escListener);
+      e.stopImmediatePropagation();
+      window.removeEventListener('keydown', escListener, true);
       _stopCurrentGame();
       _showMenu();
     }
   };
-  window.addEventListener('keydown', escListener);
+  window.addEventListener('keydown', escListener, true);
 }
 
 function _stopCurrentGame() {
@@ -187,32 +203,54 @@ function _showGameOver(gameDef, score) {
   el('arc-go-game').textContent  = gameDef.label;
   el('arc-go-score').textContent = score;
   el('arc-go-color').style.setProperty('--game-color', gameDef.color);
-  el('arc-name-input').value = '';
   el('arc-submit-msg').textContent = '';
+
+  // Resolve the username from the current auth session
+  const user     = getCurrentUser();
+  const username = user?.user_metadata?.username ?? user?.email ?? null;
+
+  // Swap the free-text name input for a read-only display of the logged-in username.
+  // The input is hidden; the label now shows who will be credited on the leaderboard.
+  const input = el('arc-name-input');
+  if (username) {
+    input.value    = username;
+    input.readOnly = true;
+    // Show the username visually in the label
+    const label = input.closest('.arc-name-row')?.querySelector('.arc-name-label');
+    if (label) label.textContent = `POSTING AS: ${username}`;
+  } else {
+    input.value    = '';
+    input.readOnly = false;
+    input.maxLength = 20;
+  }
 
   _showScreen('arc-screen-gameover');
 
-  const input  = el('arc-name-input');
-  const btn    = el('arc-submit-btn');
-  const skip   = el('arc-skip-btn');
+  // Clone-replace ALL three interactive elements to clear any accumulated listeners
+  // from previous game-over screens. Without this, the input's Enter listener stacks
+  // up each game and fires multiple times with stale gameDef/score closures.
+  const btn  = el('arc-submit-btn');
+  const skip = el('arc-skip-btn');
 
-  // Limit to 20 characters
-  input.maxLength = 20;
-  input.focus();
-
-  // Remove old listeners before re-attaching
   const newBtn  = btn.cloneNode(true);
   const newSkip = skip.cloneNode(true);
+
+  // cloneNode copies the disabled attribute if it was set by a previous submission,
+  // so explicitly re-enable the button every time the game-over screen opens.
+  newBtn.disabled = false;
+
   btn.parentNode.replaceChild(newBtn, btn);
   skip.parentNode.replaceChild(newSkip, skip);
 
-  newBtn.addEventListener('click', () => _submitAndShowLeaderboard(gameDef, score));
+  newBtn.addEventListener('click',  () => _submitAndShowLeaderboard(gameDef, score));
   newSkip.addEventListener('click', () => _showLeaderboard(gameDef.id, null));
-
-  // Enter key submits
-  input.addEventListener('keydown', e => {
-    if (e.key === 'Enter') _submitAndShowLeaderboard(gameDef, score);
-  });
+  if (!username) {
+    // Only listen for Enter on the input when the user needs to type a name
+    el('arc-name-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') _submitAndShowLeaderboard(gameDef, score);
+    });
+  }
+  if (!username) el('arc-name-input').focus();
 }
 
 async function _submitAndShowLeaderboard(gameDef, score) {

@@ -60,109 +60,76 @@ function mesh(geo, mat) {
 function box(w, h, d)       { return new THREE.BoxGeometry(w, h, d); }
 function cyl(rt, rb, h, s)  { return new THREE.CylinderGeometry(rt, rb, h, s); }
 
-// ── Demo Pong on the idle screen ──────────────────────────────────────────────
-// 256×192 canvas, phosphor-green style, CPU vs CPU, runs at 30 fps via setInterval.
-function makeDemoScreen() {
-  const CW = 256, CH = 192;
+// ── Static idle screen texture ────────────────────────────────────────────────
+// Drawn once onto a 512×384 canvas (4:3 matching SCR_W/SCR_H ratio).
+// Shows a styled title screen like the PC's P·ANALYZE display.
+function makeIdleScreen(glowColor) {
+  const CW = 512, CH = 384;
   const cv  = document.createElement('canvas');
   cv.width  = CW;
   cv.height = CH;
   const ctx = cv.getContext('2d');
 
-  const PH = 28;   // paddle height
-  const PW = 5;    // paddle width
-  const BR = 4;    // ball radius
-  const SPD = 2.4;
+  // Background — deep dark with subtle vignette
+  ctx.fillStyle = '#020408';
+  ctx.fillRect(0, 0, CW, CH);
+  const vig = ctx.createRadialGradient(CW/2, CH/2, CH*0.15, CW/2, CH/2, CH*0.72);
+  vig.addColorStop(0, 'rgba(0,0,0,0)');
+  vig.addColorStop(1, 'rgba(0,0,0,0.70)');
+  ctx.fillStyle = vig;
+  ctx.fillRect(0, 0, CW, CH);
 
-  let py = CH / 2 - PH / 2;  // left paddle
-  let ry = CH / 2 - PH / 2;  // right paddle
-  let bx = CW / 2, by = CH / 2;
-  let vx = SPD, vy = SPD * 0.6;
+  // Subtle horizontal scanlines
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  for (let y = 0; y < CH; y += 2) ctx.fillRect(0, y, CW, 1);
 
-  let ls = 0, rs = 0;  // score
-
-  function tick() {
-    bx += vx; by += vy;
-    if (by - BR < 0)   { by = BR;      vy = Math.abs(vy); }
-    if (by + BR > CH)  { by = CH - BR; vy = -Math.abs(vy); }
-
-    // Left paddle AI
-    if (py + PH / 2 < by - 2) py = Math.min(py + 2.1, CH - PH);
-    else if (py + PH / 2 > by + 2) py = Math.max(py - 2.1, 0);
-
-    // Right paddle AI (slightly slower = less perfect)
-    if (ry + PH / 2 < by - 4) ry = Math.min(ry + 1.8, CH - PH);
-    else if (ry + PH / 2 > by + 4) ry = Math.max(ry - 1.8, 0);
-
-    // Left paddle hit
-    if (vx < 0 && bx - BR <= PW + 4 && by >= py && by <= py + PH) {
-      vx = Math.abs(vx);
-      vy += (Math.random() - 0.5) * 0.8;
-    }
-    // Right paddle hit
-    if (vx > 0 && bx + BR >= CW - PW - 4 && by >= ry && by <= ry + PH) {
-      vx = -Math.abs(vx);
-      vy += (Math.random() - 0.5) * 0.8;
-    }
-
-    // Score reset
-    if (bx < 0)  { rs++; bx = CW / 2; by = CH / 2; vx =  SPD; vy = SPD * 0.5; }
-    if (bx > CW) { ls++; bx = CW / 2; by = CH / 2; vx = -SPD; vy = SPD * 0.5; }
-    if (ls > 9 || rs > 9) { ls = 0; rs = 0; }
-
-    // Draw
-    ctx.fillStyle = '#000308';
-    ctx.fillRect(0, 0, CW, CH);
-
-    // Scanline effect: every other row is slightly dimmer
-    ctx.fillStyle = 'rgba(0,0,0,0.18)';
-    for (let y = 0; y < CH; y += 2) ctx.fillRect(0, y, CW, 1);
-
-    // Centre dash
-    ctx.setLineDash([5, 6]);
-    ctx.strokeStyle = 'rgba(0,255,120,0.22)';
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(CW / 2, 0); ctx.lineTo(CW / 2, CH); ctx.stroke();
-    ctx.setLineDash([]);
-
-    // Score
-    ctx.fillStyle    = 'rgba(0,255,120,0.75)';
-    ctx.font         = 'bold 14px monospace';
-    ctx.textAlign    = 'center';
-    ctx.fillText(ls, CW * 0.27, 16);
-    ctx.fillText(rs, CW * 0.73, 16);
-
-    // Paddles
-    ctx.shadowColor = '#00ff78';
-    ctx.shadowBlur  = 6;
-    ctx.fillStyle   = '#00ff78';
-    ctx.fillRect(4,        py, PW, PH);
-    ctx.fillRect(CW - 4 - PW, ry, PW, PH);
-
-    // Ball
+  // Corner brackets (same style as project frames)
+  ctx.strokeStyle = glowColor;
+  ctx.lineWidth   = 2.5;
+  ctx.globalAlpha = 0.55;
+  [[28,22],[CW-28,22],[28,CH-22],[CW-28,CH-22]].forEach(([cx, cy]) => {
+    const sx = cx < CW/2 ? 34 : -34;
+    const sy = cy < CH/2 ? 28 : -28;
     ctx.beginPath();
-    ctx.arc(bx, by, BR, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.shadowBlur = 0;
+    ctx.moveTo(cx+sx, cy); ctx.lineTo(cx, cy); ctx.lineTo(cx, cy+sy);
+    ctx.stroke();
+  });
+  ctx.globalAlpha = 1;
 
-    // DEMO watermark
-    ctx.fillStyle = 'rgba(0,255,120,0.28)';
-    ctx.font      = '9px monospace';
-    ctx.textAlign = 'right';
-    ctx.fillText('DEMO', CW - 4, CH - 4);
+  // Main title — "ARCADE" in neon
+  ctx.shadowColor = glowColor;
+  ctx.shadowBlur  = 36;
+  ctx.fillStyle   = glowColor;
+  ctx.font        = `bold 88px "Courier New", monospace`;
+  ctx.textAlign   = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('ARCADE', CW / 2, CH * 0.36);
 
-    tex.needsUpdate = true;
-  }
+  // Divider line
+  ctx.shadowBlur  = 0;
+  ctx.strokeStyle = glowColor;
+  ctx.lineWidth   = 1.5;
+  ctx.globalAlpha = 0.40;
+  ctx.beginPath(); ctx.moveTo(60, CH * 0.54); ctx.lineTo(CW - 60, CH * 0.54); ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // Game list
+  const games = ['PONG', 'GALAGA', 'BREAKOUT'];
+  ctx.font      = `bold 26px "Courier New", monospace`;
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.shadowBlur = 0;
+  games.forEach((g, i) => {
+    ctx.fillText(g, CW / 2, CH * 0.62 + i * 36);
+  });
+
+  // "CLICK TO PLAY" hint
+  ctx.font      = `18px "Courier New", monospace`;
+  ctx.fillStyle = 'rgba(255,255,255,0.22)';
+  ctx.fillText('CLICK TO PLAY', CW / 2, CH - 22);
 
   const tex = new THREE.CanvasTexture(cv);
   tex.minFilter       = THREE.LinearFilter;
   tex.generateMipmaps = false;
-
-  // 30 fps demo loop
-  const id = setInterval(tick, 33);
-  // Store interval id on the canvas so it can be cleared if needed
-  cv._demoInterval = id;
-
   return tex;
 }
 
@@ -271,10 +238,12 @@ export function buildArcade(proj) {
   group.add(bezel);
 
   // ── E. Screen mesh (canvas texture — live demo pong) ──────────────────────
-  const demoTex   = makeDemoScreen();
-  const screenMat = new THREE.MeshBasicMaterial({ map: demoTex });
+  const idleTex   = makeIdleScreen(glowColor);
+  const screenMat = new THREE.MeshBasicMaterial({ map: idleTex });
   const screenMesh = mesh(new THREE.PlaneGeometry(SCR_W, SCR_H), screenMat);
-  screenMesh.position.set(0, SCR_Y, CAB_D / 2 + 0.005);
+  // Bezel front face is at CAB_D/2 - 0.02 + 0.035 = CAB_D/2 + 0.015.
+  // Screen must sit in front of that so it isn't hidden inside the bezel box.
+  screenMesh.position.set(0, SCR_Y, CAB_D / 2 + 0.025);
   group.add(screenMesh);
 
   // Screen glow sprite (additive blending, sits just in front of screen)
@@ -286,8 +255,9 @@ export function buildArcade(proj) {
     depthWrite:  false,
     side:        THREE.DoubleSide,
   });
-  const glowPlane = mesh(new THREE.PlaneGeometry(SCR_W + 0.60, SCR_H + 0.60), glowMat);
-  glowPlane.position.set(0, SCR_Y, CAB_D / 2 + 0.004);
+  // +0.10 on each axis — just a thin halo around the screen edge, not a huge blob
+  const glowPlane = mesh(new THREE.PlaneGeometry(SCR_W + 0.10, SCR_H + 0.10), glowMat);
+  glowPlane.position.set(0, SCR_Y, CAB_D / 2 + 0.026);
   group.add(glowPlane);
 
   // ── F. Control panel (angled forward at waist height) ─────────────────────

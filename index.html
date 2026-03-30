@@ -19,14 +19,15 @@
   <link rel="stylesheet" href="css/pc.css" />
   <link rel="stylesheet" href="css/tv.css" />
   <link rel="stylesheet" href="css/arcade.css" />
+  <link rel="stylesheet" href="css/auth.css" />
 </head>
 <body>
 
   <!-- ── Canvas ─────────────────────────────────────────── -->
   <canvas id="canvas"></canvas>
 
-  <!-- ── Loading screen ─────────────────────────────────── -->
-  <div id="loading">
+  <!-- ── Loading screen — hidden until auth succeeds ──────── -->
+  <div id="loading" style="display:none">
     <div class="loading-title">DEEP SPACE</div>
     <div class="loading-bar-wrap">
       <div class="loading-bar"></div>
@@ -36,9 +37,11 @@
 
   <!-- ── Header ─────────────────────────────────────────── -->
   <div id="header">
-    <!-- Edit "YOUR NAME" below -->
-    <div class="site-name">YOUR NAME</div>
     <div class="hint">DRAG TO LOOK &nbsp;·&nbsp; CLICK A PROJECT</div>
+    <div class="header-user">
+      <span id="header-username"></span>
+      <button id="header-signout">SIGN OUT</button>
+    </div>
   </div>
 
   <!-- ── Project detail overlay ─────────────────────────── -->

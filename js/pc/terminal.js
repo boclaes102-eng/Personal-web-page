@@ -13,7 +13,7 @@
  *   hideTerminal(onComplete)
  */
 
-'use strict';
+import { sfx } from '../audio/audio-manager.js';
 
 // ── Password analysis ─────────────────────────────────────────────────────────
 
@@ -208,6 +208,7 @@ async function typeLine(text, cls = '', charDelay = 14) {
   _output.appendChild(div);
   for (const ch of text) {
     div.textContent += ch;
+    sfx('pc-type');
     _output.scrollTop = _output.scrollHeight;
     await sleep(charDelay);
   }
@@ -399,6 +400,7 @@ function buildDOM() {
   _checkBtn.addEventListener('click', () => runHibpCheck());
 
   _input.addEventListener('input', () => {
+    sfx('pc-type');
     const val = _input.value;
     if (!val) { _output.innerHTML = ''; _lastPw = ''; return; }
     if (val === 'exit') return;
@@ -408,6 +410,7 @@ function buildDOM() {
   _input.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
       e.stopPropagation();
+      sfx('pc-enter-key');
       const cmd = _input.value.trim().toLowerCase();
       if (cmd === 'exit' || cmd === 'quit') { _onClose?.(); return; }
       // Enter = run breach check on whatever password is typed
@@ -426,6 +429,7 @@ export function showTerminal(onClose) {
   _onClose      = onClose;
   _lastPw       = '';
   _checkRunning = false;
+  sfx('pc-enter');
   buildDOM();
 
   _el.style.transformOrigin = 'center center';
@@ -441,6 +445,7 @@ export function showTerminal(onClose) {
 
 export function hideTerminal(onComplete) {
   if (!_el) { onComplete?.(); return; }
+  sfx('pc-exit');
   const el = _el;
   _el = _output = _input = _checkBtn = null;
 

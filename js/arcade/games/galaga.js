@@ -11,6 +11,8 @@
  *   Space                   — shoot
  */
 
+import { sfx } from '../../audio/audio-manager.js';
+
 export function startGalaga(canvas, onGameOver) {
   const ctx = canvas.getContext('2d');
   const W   = canvas.width;
@@ -251,6 +253,7 @@ export function startGalaga(canvas, onGameOver) {
         x: shipX + SHIP_W / 2 - BULLET_W / 2,
         y: SHIP_Y,
       });
+      sfx('galaga-shoot');
     }
     spaceWasUp = !spaceDown;
 
@@ -349,6 +352,7 @@ export function startGalaga(canvas, onGameOver) {
             b.y < e.y + E_H && b.y + BULLET_H > e.y) {
           const pts = e.diving ? ENEMY_DIVE_PTS[e.row] : ENEMY_POINTS[e.row];
           score += pts;
+          sfx('galaga-enemy-die');
           spawnExplosion(e.x + E_W / 2, e.y + E_H / 2, ENEMY_COLORS[e.row]);
           e.alive   = false;
           e.diving  = false;
@@ -375,6 +379,7 @@ export function startGalaga(canvas, onGameOver) {
 
       if (hitByBullet || hitByEnemy) {
         lives--;
+        sfx('galaga-player-die');
         spawnExplosion(shipCx, shipCy, '#00ffcc');
         eBullets = [];
         if (lives <= 0) {
@@ -402,6 +407,7 @@ export function startGalaga(canvas, onGameOver) {
 
     // ── Wave clear check ──────────────────────────────────────────────────────────
     if (enemies.every(e => !e.alive)) {
+      sfx('galaga-wave-clear');
       wave++;
       score += 1000;  // wave clear bonus
       resetWave();
