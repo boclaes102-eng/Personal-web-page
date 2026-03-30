@@ -321,8 +321,8 @@
   animation: pc-win-open 0.18s ease-out;
 }
 @keyframes pc-win-open {
-  from { clip-path: inset(50% 0 50% 0); opacity: 0.4; }
-  to   { clip-path: inset(0% 0 0% 0);   opacity: 1; }
+  from { transform: translateY(100%); opacity: 0.5; }
+  to   { transform: translateY(0);    opacity: 1; }
 }
 
 .pc-window-titlebar {

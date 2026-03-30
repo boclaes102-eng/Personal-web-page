@@ -123,10 +123,28 @@ function fmtClock() {
 
 // ── Window manager ────────────────────────────────────────────────────────────
 
-function closeWindow() {
+// Animated close — slides the window down and out (reverse of the open slide-up).
+// onComplete is called after the animation finishes.
+function closeWindow(onComplete) {
+  if (!_activeWin) { onComplete?.(); return; }
+  const win = _activeWin;
+  const bar = _taskbarApp;
+  _activeWin  = null;
+  _taskbarApp = null;
+  if (bar) bar.remove();
+  const { gsap } = window;
+  gsap.to(win, {
+    y: '100%', opacity: 0, duration: 0.22, ease: 'power2.in',
+    onComplete: () => { win.remove(); onComplete?.(); },
+  });
+}
+
+// Instant close — used when switching apps so the new window doesn't overlap
+// the outgoing slide-down animation.
+function closeWindowInstant() {
   if (!_activeWin) return;
   _activeWin.remove();
-  _activeWin = null;
+  _activeWin  = null;
   if (_taskbarApp) { _taskbarApp.remove(); _taskbarApp = null; }
 }
 
@@ -137,8 +155,9 @@ async function openApp(app, iconEl) {
   _el.querySelectorAll('.pc-icon').forEach(i => i.classList.remove('selected'));
   iconEl.classList.add('selected');
 
-  // Close any open window first
-  closeWindow();
+  // Close any open window instantly when switching apps — avoids the new window
+  // overlapping a still-playing slide-down animation from the previous one.
+  closeWindowInstant();
 
   // ─ Build window ─
   const win = el('div','pc-window');
@@ -156,6 +175,13 @@ async function openApp(app, iconEl) {
   win.append(titlebar, content);
   _workspace.appendChild(win);
 
+  // Typing sound — delegated so it covers every input/textarea in every tool
+  win.addEventListener('keydown', e => {
+    if (!e.target.matches('input, textarea')) return;
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    if (e.key.length === 1 || e.key === 'Backspace' || e.key === 'Delete') sfx('pc-type');
+  });
+
   // Taskbar entry
   _taskbarApp = el('div','pc-taskbar-app', app.exe);
   _el.querySelector('.pc-taskbar').insertBefore(
@@ -166,8 +192,9 @@ async function openApp(app, iconEl) {
   // Close handlers
   backBtn.addEventListener('click', () => {
     sfx('pc-exit');
-    closeWindow();
-    _el.querySelectorAll('.pc-icon').forEach(i => i.classList.remove('selected'));
+    closeWindow(() => {
+      _el?.querySelectorAll('.pc-icon').forEach(i => i.classList.remove('selected'));
+    });
   });
 
   // Load and start tool
@@ -247,8 +274,9 @@ function buildDOM() {
       e.stopPropagation();
       if (_activeWin) {
         sfx('pc-exit');
-        closeWindow();
-        _el.querySelectorAll('.pc-icon').forEach(i => i.classList.remove('selected'));
+        closeWindow(() => {
+          _el?.querySelectorAll('.pc-icon').forEach(i => i.classList.remove('selected'));
+        });
       } else {
         _onShut?.();
       }

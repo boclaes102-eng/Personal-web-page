@@ -315,31 +315,53 @@
   margin-top: 0.08rem;
 }
 
-/* ── ② WEATHER — disaster box ────────────────────────────── */
-.tv-disaster-box {
-  border: 1px solid rgba(255, 120, 50, 0.22);
-  background: rgba(255, 80, 20, 0.04);
-  padding: 0.3rem 0.5rem;
+/* ── ② WEATHER — disaster grid ───────────────────────────── */
+/* Outer grid: always 2 columns so categories sit side-by-side */
+.tv-disaster-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
   flex-shrink: 0;
 }
+/* Individual category box */
+.tv-dis-box {
+  border: 1px solid rgba(255, 120, 50, 0.22);
+  background: rgba(255, 80, 20, 0.04);
+  padding: 0 0 0.15rem;
+  overflow: hidden;
+}
+/* Category header row inside each box */
+.tv-dis-box-hdr {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(255, 80, 20, 0.12);
+  border-left: 2px solid #ff8844;
+  padding: 0.06rem 0.35rem;
+  margin-bottom: 0.06rem;
+}
+.tv-disaster-icon { flex-shrink: 0; font-size: 0.9em; }
+.tv-disaster-cat  {
+  flex: 1;
+  font-weight: bold;
+  color: #ff8844;
+  letter-spacing: 0.04em;
+  font-size: 0.78em;
+}
+.tv-disaster-count {
+  color: var(--tv-ph-dim);
+  font-size: 0.78em;
+}
+/* Event row within a box */
 .tv-disaster-row {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
-  font-size: 0.75em;
-  padding: 0.14rem 0;
+  gap: 0.3rem;
+  font-size: 0.68em;
+  padding: 0.08rem 0.35rem;
   border-bottom: 1px solid var(--tv-ph-dk);
 }
 .tv-disaster-row:last-child { border-bottom: none; }
-.tv-disaster-icon { flex-shrink: 0; font-size: 0.95em; }
-.tv-disaster-cat  {
-  flex-shrink: 0;
-  min-width: 5.5rem;
-  font-weight: bold;
-  color: #ff8844;
-  letter-spacing: 0.05em;
-  font-size: 0.9em;
-}
 .tv-disaster-title {
   flex: 1;
   overflow: hidden;
@@ -350,9 +372,17 @@
 .tv-disaster-date {
   flex-shrink: 0;
   color: var(--tv-ph-dim);
-  font-size: 0.88em;
-  min-width: 4rem;
+  font-size: 0.9em;
+  min-width: 3.2rem;
   text-align: right;
+}
+/* "All clear" message when a category has no events */
+.tv-dis-clear {
+  font-size: 0.66em;
+  color: #44bb66;
+  letter-spacing: 0.03em;
+  padding: 0.22rem 0.4rem;
+  text-align: center;
 }
 .tv-no-events {
   font-size: 0.75em;

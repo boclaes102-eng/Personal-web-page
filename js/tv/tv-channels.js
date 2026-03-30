@@ -318,6 +318,17 @@ const EONET_ICON = {
   dustHaze:     '🌫', tempExtremes: '🌡', manmade:    '⚠',
   waterColor:   '🌊',
 };
+
+// Fixed 6-box grid — always shown even when a category has zero events.
+// "clear" is the message displayed when nothing is happening in that category.
+const DISASTER_GRID = [
+  { id: 'wildfires',    icon: '🔥', name: 'WILDFIRES',     clear: 'NO ACTIVE FIRES — ALL CLEAR' },
+  { id: 'earthquakes',  icon: '🌍', name: 'EARTHQUAKES',   clear: 'GROUND STABLE — NO SEISMIC ACTIVITY' },
+  { id: 'volcanoes',    icon: '🌋', name: 'VOLCANOES',     clear: "NO POMPEII TODAY — VOLCANOES DORMANT" },
+  { id: 'severeStorms', icon: '⛈', name: 'SEVERE STORMS', clear: 'BLUE SKIES — NO MAJOR STORM SYSTEMS' },
+  { id: 'floods',       icon: '💧', name: 'FLOODS',        clear: 'STAYING DRY — NO FLOOD EVENTS' },
+  { id: 'seaLakeIce',   icon: '🌊', name: 'SEA EVENTS',    clear: 'CALM WATERS — NO TSUNAMI ACTIVITY' },
+];
 function _relDate(iso) {
   const diff = Math.floor((Date.now() - new Date(iso)) / 86400000);
   if (diff <= 0) return 'TODAY';
@@ -389,7 +400,7 @@ async function _weather(ch, ep) {
             .then(r => r.json()).catch(() => null)
         )
       ),
-      fetch('https://eonet.gsfc.nasa.gov/api/v3/events?days=7&limit=8')
+      fetch('https://eonet.gsfc.nasa.gov/api/v3/events?days=7&limit=50')
         .then(r => r.json()).catch(() => null),
     ]);
     if (ep !== _epoch) return;
@@ -427,34 +438,57 @@ async function _weather(ch, ep) {
 
     const dateStr = new Date().toLocaleDateString('en-GB', { weekday: 'long', month: 'long', day: 'numeric' });
 
-    // ── Natural disaster box (EONET) ──────────────────────────────────────────
-    let disasterHtml = '';
+    // ── Natural disaster grid (EONET) ─────────────────────────────────────────
+    // Bucket incoming events by category, capped at 5 per type so one busy
+    // category (e.g. wildfires) can never crowd out all the others.
     const eonetEvents = eonetRes?.events || [];
-    if (eonetEvents.length) {
-      const rows = eonetEvents.slice(0, 6).map(ev => {
-        const catId   = ev.categories?.[0]?.id    || '';
-        const catName = ev.categories?.[0]?.title || 'EVENT';
-        const icon    = EONET_ICON[catId] || '⚠';
+    const _evBucket = {};
+    const _fixedIds = new Set(DISASTER_GRID.map(c => c.id));
+    for (const ev of eonetEvents) {
+      const catId = ev.categories?.[0]?.id || 'unknown';
+      if (!_evBucket[catId]) _evBucket[catId] = [];
+      if (_evBucket[catId].length < 5) _evBucket[catId].push(ev);
+    }
+
+    function _disasterBox(icon, name, events, clearMsg) {
+      const hdr = `<div class="tv-dis-box-hdr">
+        <span class="tv-disaster-icon">${icon}</span>
+        <span class="tv-disaster-cat">${name}</span>
+        ${events.length > 1 ? `<span class="tv-disaster-count">×${events.length}</span>` : ''}
+      </div>`;
+      if (!events.length) {
+        return `<div class="tv-dis-box">${hdr}<div class="tv-dis-clear">${clearMsg}</div></div>`;
+      }
+      const rows = events.map(ev => {
         const lastGeo = ev.geometry?.[ev.geometry.length - 1];
         const date    = lastGeo?.date ? _relDate(lastGeo.date) : '';
-        const title   = ev.title.length > 40 ? ev.title.slice(0, 37) + '...' : ev.title;
+        const title   = ev.title.length > 36 ? ev.title.slice(0, 33) + '...' : ev.title;
         return `<div class="tv-disaster-row">
-          <span class="tv-disaster-icon">${icon}</span>
-          <span class="tv-disaster-cat">${catName.toUpperCase()}</span>
           <span class="tv-disaster-title">${title.toUpperCase()}</span>
           <span class="tv-disaster-date">${date}</span>
         </div>`;
       }).join('');
-      disasterHtml = `
-        <div class="tv-divider" style="border-color:rgba(255,120,50,0.4)"></div>
-        <div class="tv-section-lbl" style="color:#ff8844">⚠ NATURAL EVENTS — PAST 7 DAYS</div>
-        <div class="tv-disaster-box">${rows}</div>`;
-    } else {
-      disasterHtml = `
-        <div class="tv-divider" style="border-color:rgba(255,120,50,0.4)"></div>
-        <div class="tv-section-lbl" style="color:#ff8844">⚠ NATURAL EVENTS — PAST 7 DAYS</div>
-        <div class="tv-disaster-box"><div class="tv-no-events">NO MAJOR EVENTS REPORTED THIS WEEK</div></div>`;
+      return `<div class="tv-dis-box">${hdr}${rows}</div>`;
     }
+
+    // Fixed 6 boxes (always present)
+    const fixedBoxes = DISASTER_GRID
+      .map(c => _disasterBox(c.icon, c.name, _evBucket[c.id] || [], c.clear))
+      .join('');
+
+    // Any extra categories returned by EONET that aren't in the fixed grid
+    const extraBoxes = Object.entries(_evBucket)
+      .filter(([id]) => !_fixedIds.has(id))
+      .map(([catId, events]) => {
+        const icon = EONET_ICON[catId] || '⚠';
+        const name = (events[0]?.categories?.[0]?.title || catId).toUpperCase();
+        return _disasterBox(icon, name, events, '');
+      }).join('');
+
+    const disasterHtml = `
+      <div class="tv-divider" style="border-color:rgba(255,120,50,0.4)"></div>
+      <div class="tv-section-lbl" style="color:#ff8844">⚠ NATURAL EVENTS — PAST 7 DAYS</div>
+      <div class="tv-disaster-grid">${fixedBoxes}${extraBoxes}</div>`;
 
     c.innerHTML = `
       <div class="tv-wx-header">

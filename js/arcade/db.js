@@ -47,6 +47,11 @@
  *  CREATE POLICY "auth_insert" ON arcade_scores
  *    FOR INSERT WITH CHECK (auth.uid() IS NOT NULL AND score >= 0);
  *
+ *  -- Allow users to update their own scores (needed for best-score upsert)
+ *  CREATE POLICY "auth_update" ON arcade_scores
+ *    FOR UPDATE USING (auth.uid() = user_id)
+ *    WITH CHECK (auth.uid() IS NOT NULL AND score >= 0);
+ *
  * ───────────────────────────────────────────────────────────────────
  */
 
@@ -66,16 +71,50 @@ function headers() {
 }
 
 /**
- * Insert a new score row into arcade_scores.
+ * Submit a score for a game. If the user already has a score for this game,
+ * only updates it when the new score is higher (best-score-only behaviour).
  * @param {string} playerName  Display name — 1 to 20 characters
  * @param {'pong'|'galaga'|'breakout'} game
  * @param {number} score       Non-negative integer
  * @returns {Promise<void>}    Rejects if the request fails
  */
 export async function submitScore(playerName, game, score) {
-  const user    = getCurrentUser();
+  const user = getCurrentUser();
+
+  // When logged in, check for an existing score row for this user+game combo.
+  if (user?.id) {
+    const checkUrl = `${SUPABASE_URL}/rest/v1/arcade_scores`
+      + `?user_id=eq.${encodeURIComponent(user.id)}`
+      + `&game=eq.${encodeURIComponent(game)}`
+      + `&select=id,score`
+      + `&limit=1`;
+
+    const checkRes = await fetch(checkUrl, { headers: headers() });
+    if (checkRes.ok) {
+      const existing = await checkRes.json();
+      if (existing.length > 0) {
+        // Row exists — only update when new score beats the stored best
+        if (score <= existing[0].score) return;
+        const patchRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/arcade_scores?id=eq.${existing[0].id}`,
+          {
+            method:  'PATCH',
+            headers: { ...headers(), 'Prefer': 'return=minimal' },
+            body:    JSON.stringify({ score, player_name: playerName }),
+          }
+        );
+        if (!patchRes.ok) {
+          const detail = await patchRes.text().catch(() => String(patchRes.status));
+          throw new Error(`Score update failed (${patchRes.status}): ${detail}`);
+        }
+        return;
+      }
+    }
+  }
+
+  // No existing row — insert fresh
   const payload = { player_name: playerName, game, score };
-  if (user?.id) payload.user_id = user.id;   // link score to the auth user for RLS
+  if (user?.id) payload.user_id = user.id;
 
   const res = await fetch(`${SUPABASE_URL}/rest/v1/arcade_scores`, {
     method:  'POST',

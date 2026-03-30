@@ -109,6 +109,7 @@ export function zoomIn(group) {
 let _currentZoomType = 'project'; // kept private — only zoom functions need it
 
 export function zoomToCelestial(target) {
+  sfx('zoom-in');
   cam.mode = 'transitioning';
   _currentZoomType = 'celestial';
   cam.savedYaw   = cam.yaw;

@@ -272,7 +272,7 @@ function _zoomIn() {
   osc.frequency.exponentialRampToValueAtTime(440, t + 0.36);
   const g = ctx.createGain();
   g.gain.setValueAtTime(0, t);
-  g.gain.linearRampToValueAtTime(0.20, t + 0.07);
+  g.gain.linearRampToValueAtTime(0.45, t + 0.07);
   g.gain.exponentialRampToValueAtTime(0.001, t + 0.40);
   osc.connect(g); g.connect(sfxGain);
   osc.start(t); osc.stop(t + 0.41);

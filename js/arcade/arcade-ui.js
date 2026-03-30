@@ -178,7 +178,7 @@ function _launchGame(gameDef) {
   _stopGame = gameDef.start(gameCanvas, score => {
     _lastScore = score;
     _stopCurrentGame();
-    _showGameOver(gameDef, score);
+    _autoSubmitAndShowLeaderboard(gameDef, score);
   });
 
   // ESC returns to menu (not out of arcade).
@@ -198,75 +198,45 @@ function _stopCurrentGame() {
   if (_stopGame) { _stopGame(); _stopGame = null; }
 }
 
-// ── Game-over / name entry screen ─────────────────────────────────────────────
-function _showGameOver(gameDef, score) {
-  el('arc-go-game').textContent  = gameDef.label;
-  el('arc-go-score').textContent = score;
-  el('arc-go-color').style.setProperty('--game-color', gameDef.color);
-  el('arc-submit-msg').textContent = '';
-
-  // Resolve the username from the current auth session
+// ── Auto-submit score then show leaderboard ───────────────────────────────────
+async function _autoSubmitAndShowLeaderboard(gameDef, score) {
   const user     = getCurrentUser();
   const username = user?.user_metadata?.username ?? user?.email ?? null;
 
-  // Swap the free-text name input for a read-only display of the logged-in username.
-  // The input is hidden; the label now shows who will be credited on the leaderboard.
-  const input = el('arc-name-input');
+  // Switch to leaderboard screen straight away so the transition feels instant
+  _showScreen('arc-screen-lb');
+  el('arc-lb-title').textContent = `${gameDef.label} — HALL OF FAME`;
+  el('arc-lb-body').innerHTML    = '<div class="arc-lb-loading">SAVING SCORE…</div>';
+  el('arc-lb-color').style.setProperty('--game-color', gameDef.color);
+
+  document.querySelectorAll('.arc-lb-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.game === gameDef.id);
+    t.onclick = () => _showLeaderboard(t.dataset.game, null);
+  });
+  el('arc-lb-back').onclick  = () => _showMenu();
+  el('arc-lb-again').onclick = () => _launchGame(gameDef);
+
+  // Submit silently — best-score logic is already handled inside db.js
   if (username) {
-    input.value    = username;
-    input.readOnly = true;
-    // Show the username visually in the label
-    const label = input.closest('.arc-name-row')?.querySelector('.arc-name-label');
-    if (label) label.textContent = `POSTING AS: ${username}`;
-  } else {
-    input.value    = '';
-    input.readOnly = false;
-    input.maxLength = 20;
+    try {
+      await submitScore(username, gameDef.id, score);
+    } catch (err) {
+      console.error('Score submit error:', err);
+      el('arc-lb-body').innerHTML =
+        `<div class="arc-lb-error">SCORE SAVE FAILED<br><small>${err.message}</small></div>`;
+      await new Promise(r => setTimeout(r, 2000));
+    }
   }
 
-  _showScreen('arc-screen-gameover');
-
-  // Clone-replace ALL three interactive elements to clear any accumulated listeners
-  // from previous game-over screens. Without this, the input's Enter listener stacks
-  // up each game and fires multiple times with stale gameDef/score closures.
-  const btn  = el('arc-submit-btn');
-  const skip = el('arc-skip-btn');
-
-  const newBtn  = btn.cloneNode(true);
-  const newSkip = skip.cloneNode(true);
-
-  // cloneNode copies the disabled attribute if it was set by a previous submission,
-  // so explicitly re-enable the button every time the game-over screen opens.
-  newBtn.disabled = false;
-
-  btn.parentNode.replaceChild(newBtn, btn);
-  skip.parentNode.replaceChild(newSkip, skip);
-
-  newBtn.addEventListener('click',  () => _submitAndShowLeaderboard(gameDef, score));
-  newSkip.addEventListener('click', () => _showLeaderboard(gameDef.id, null));
-  if (!username) {
-    // Only listen for Enter on the input when the user needs to type a name
-    el('arc-name-input').addEventListener('keydown', e => {
-      if (e.key === 'Enter') _submitAndShowLeaderboard(gameDef, score);
-    });
-  }
-  if (!username) el('arc-name-input').focus();
-}
-
-async function _submitAndShowLeaderboard(gameDef, score) {
-  const name = el('arc-name-input').value.trim();
-  if (!name) { el('arc-submit-msg').textContent = 'ENTER YOUR NAME FIRST'; return; }
-
-  el('arc-submit-msg').textContent = 'SAVING…';
-  el('arc-submit-btn').disabled = true;
-
+  // Fetch and render the leaderboard (reflects the just-saved score)
   try {
-    await submitScore(name, gameDef.id, score);
-    _showLeaderboard(gameDef.id, name);
+    const rows = await getLeaderboard(gameDef.id, 10);
+    _renderLeaderboard(rows, username, gameDef.color);
   } catch (err) {
-    console.error('Score submit error:', err);
-    el('arc-submit-msg').textContent = 'SAVE FAILED — SHOWING LEADERBOARD ANYWAY';
-    setTimeout(() => _showLeaderboard(gameDef.id, null), 1200);
+    console.error('Leaderboard fetch error:', err);
+    el('arc-lb-body').innerHTML =
+      '<div class="arc-lb-error">COULD NOT LOAD SCORES<br>'
+      + '<small>Check your Supabase anon key in db.js</small></div>';
   }
 }
 
