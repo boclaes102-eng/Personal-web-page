@@ -309,7 +309,21 @@ async function _news(ch, ep) {
   }, 1000);
 }
 
-// ── ② WEATHER — Open-Meteo + user geolocation ────────────────────────────────
+// ── ② WEATHER — Open-Meteo + 4 nearby cities via Nominatim ──────────────────
+// EONET category → retro-safe emoji icon
+const EONET_ICON = {
+  wildfires:    '🔥', severeStorms: '⛈', volcanoes:  '🌋',
+  earthquakes:  '🌍', floods:       '💧', drought:   '☀',
+  landslides:   '⛰',  snow:         '❄', seaLakeIce: '🧊',
+  dustHaze:     '🌫', tempExtremes: '🌡', manmade:    '⚠',
+  waterColor:   '🌊',
+};
+function _relDate(iso) {
+  const diff = Math.floor((Date.now() - new Date(iso)) / 86400000);
+  if (diff <= 0) return 'TODAY';
+  if (diff === 1) return '1D AGO';
+  return `${diff}D AGO`;
+}
 async function _weather(ch, ep) {
   const c = _div('tv-weather');
   _loading(c, 'ACQUIRING LOCATION...');
@@ -319,67 +333,155 @@ async function _weather(ch, ep) {
     const loc = await _locationPromise;
     if (ep !== _epoch) return;
 
+    _loading(c, 'FINDING NEARBY LOCATIONS...');
+
+    // Build a list of 4 locations: user's city + 3 nearby cities.
+    // Reverse-geocode 3 offset points at city zoom-level via Nominatim.
+    // zoom=10 always returns the municipality/city that contains that coordinate.
+    let locations = [{ lat: loc.lat, lon: loc.lon, city: loc.city }];
+    try {
+      const R = 0.40; // ~44 km per degree of lat
+      const offsets = [[R, R * 1.1], [R, -R * 1.1], [-R * 0.85, R * 0.6]]; // NE, NW, S
+      const reverseResults = await Promise.all(
+        offsets.map(([dlat, dlon]) => {
+          const lat2 = +(loc.lat + dlat).toFixed(5);
+          const lon2 = +(loc.lon + dlon).toFixed(5);
+          return fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${lat2}&lon=${lon2}&format=json&zoom=10`
+          )
+            .then(r => r.json())
+            .then(d => {
+              const a    = d.address || {};
+              const name = a.city || a.town || a.village || a.county || null;
+              return name ? { lat: lat2, lon: lon2, city: name } : null;
+            })
+            .catch(() => null);
+        })
+      );
+      if (ep !== _epoch) return;
+      const seen = new Set([loc.city.toLowerCase()]);
+      for (const nearby of reverseResults) {
+        if (!nearby || seen.has(nearby.city.toLowerCase())) continue;
+        seen.add(nearby.city.toLowerCase());
+        locations.push(nearby);
+      }
+    } catch { /* fall back to user location only */ }
+
+    // Last-resort pad if all 3 reverse geocodes failed or returned the same city
+    const PADS = [[0.4, 0.5], [0.4, -0.5], [-0.35, 0.3]];
+    for (let i = 0; locations.length < 4; i++) {
+      const [dlat, dlon] = PADS[i] || [0.4, 0];
+      locations.push({ lat: loc.lat + dlat, lon: loc.lon + dlon, city: '...' });
+    }
+
+    if (ep !== _epoch) return;
     _loading(c, 'FETCHING WEATHER DATA...');
 
-    const r = await fetch(
-      `https://api.open-meteo.com/v1/forecast` +
-      `?latitude=${loc.lat}&longitude=${loc.lon}` +
-      `&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m` +
-      `&daily=temperature_2m_max,temperature_2m_min,weather_code` +
-      `&timezone=auto&forecast_days=5`
-    );
-    if (ep !== _epoch) return;
-    const d = await r.json();
+    // Fetch weather for all 4 locations + EONET disaster events in parallel
+    const [wxData, eonetRes] = await Promise.all([
+      Promise.all(
+        locations.map(l =>
+          fetch(`https://api.open-meteo.com/v1/forecast` +
+            `?latitude=${l.lat}&longitude=${l.lon}` +
+            `&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m` +
+            `&daily=temperature_2m_max,temperature_2m_min,weather_code` +
+            `&timezone=auto&forecast_days=5`)
+            .then(r => r.json()).catch(() => null)
+        )
+      ),
+      fetch('https://eonet.gsfc.nasa.gov/api/v3/events?days=7&limit=8')
+        .then(r => r.json()).catch(() => null),
+    ]);
     if (ep !== _epoch) return;
 
-    const cur  = d.current;
-    const wx   = _wxInfo(cur.weather_code);
-    const days = d.daily;
-    const forecast = days.time.slice(0, 5).map((t, i) => ({
+    const cityCards = locations.map((l, i) => {
+      const d = wxData[i];
+      if (!d) return `<div class="tv-wx-city-card"><div class="tv-wx-card-name">${l.city.toUpperCase()}</div><div class="tv-wx-card-cond">UNAVAILABLE</div></div>`;
+      const cur = d.current;
+      const wx  = _wxInfo(cur.weather_code);
+      return `
+        <div class="tv-wx-city-card">
+          <div class="tv-wx-card-name">${l.city.toUpperCase()}</div>
+          <div class="tv-wx-card-main">
+            <span class="tv-wx-card-icon">${wx.icon}</span>
+            <span class="tv-wx-card-temp">${Math.round(cur.temperature_2m)}°C</span>
+            <span class="tv-wx-card-feel">/ ${Math.round(cur.apparent_temperature)}°</span>
+          </div>
+          <div class="tv-wx-card-cond">${wx.desc}</div>
+          <div class="tv-wx-card-detail">
+            <span>💧 ${cur.relative_humidity_2m}%</span>
+            <span>💨 ${Math.round(cur.wind_speed_10m)} km/h</span>
+          </div>
+        </div>`;
+    }).join('');
+
+    // 5-day forecast from primary location
+    const primary  = wxData[0];
+    const days     = primary?.daily;
+    const forecast = days ? days.time.slice(0, 5).map((t, i) => ({
       day: _dayName(t),
       wx:  _wxInfo(days.weather_code[i]),
       hi:  Math.round(days.temperature_2m_max[i]),
       lo:  Math.round(days.temperature_2m_min[i]),
-    }));
+    })) : [];
 
     const dateStr = new Date().toLocaleDateString('en-GB', { weekday: 'long', month: 'long', day: 'numeric' });
 
+    // ── Natural disaster box (EONET) ──────────────────────────────────────────
+    let disasterHtml = '';
+    const eonetEvents = eonetRes?.events || [];
+    if (eonetEvents.length) {
+      const rows = eonetEvents.slice(0, 6).map(ev => {
+        const catId   = ev.categories?.[0]?.id    || '';
+        const catName = ev.categories?.[0]?.title || 'EVENT';
+        const icon    = EONET_ICON[catId] || '⚠';
+        const lastGeo = ev.geometry?.[ev.geometry.length - 1];
+        const date    = lastGeo?.date ? _relDate(lastGeo.date) : '';
+        const title   = ev.title.length > 40 ? ev.title.slice(0, 37) + '...' : ev.title;
+        return `<div class="tv-disaster-row">
+          <span class="tv-disaster-icon">${icon}</span>
+          <span class="tv-disaster-cat">${catName.toUpperCase()}</span>
+          <span class="tv-disaster-title">${title.toUpperCase()}</span>
+          <span class="tv-disaster-date">${date}</span>
+        </div>`;
+      }).join('');
+      disasterHtml = `
+        <div class="tv-divider" style="border-color:rgba(255,120,50,0.4)"></div>
+        <div class="tv-section-lbl" style="color:#ff8844">⚠ NATURAL EVENTS — PAST 7 DAYS</div>
+        <div class="tv-disaster-box">${rows}</div>`;
+    } else {
+      disasterHtml = `
+        <div class="tv-divider" style="border-color:rgba(255,120,50,0.4)"></div>
+        <div class="tv-section-lbl" style="color:#ff8844">⚠ NATURAL EVENTS — PAST 7 DAYS</div>
+        <div class="tv-disaster-box"><div class="tv-no-events">NO MAJOR EVENTS REPORTED THIS WEEK</div></div>`;
+    }
+
     c.innerHTML = `
       <div class="tv-wx-header">
-        <div class="tv-wx-city">${loc.city.toUpperCase()}, ${loc.country.toUpperCase()}</div>
-        <div class="tv-wx-date">${dateStr}</div>
+        <div class="tv-wx-city">${loc.city.toUpperCase()} REGION</div>
+        <div class="tv-wx-date">${dateStr} — <span id="tv-wx-upd">${_nowTime()}</span></div>
       </div>
-      <div class="tv-wx-current">
-        <div class="tv-wx-bigicon">${wx.icon}</div>
-        <div>
-          <div class="tv-wx-temp">${Math.round(cur.temperature_2m)}°C
-            <span class="tv-wx-c">FEELS LIKE ${Math.round(cur.apparent_temperature)}°C</span>
-          </div>
-          <div class="tv-wx-cond">${wx.desc}</div>
-        </div>
-      </div>
-      <div class="tv-wx-details">
-        <span>HUMIDITY: ${cur.relative_humidity_2m}%</span>
-        <span>WIND: ${Math.round(cur.wind_speed_10m)} KM/H</span>
-      </div>
-      <div class="tv-divider" style="border-color:${ch.accent}55"></div>
-      <div class="tv-section-lbl">5-DAY FORECAST</div>
-      <div class="tv-wx-forecast">
-        ${forecast.map(f => `
-          <div class="tv-wx-day">
-            <div class="tv-wx-dn">${f.day}</div>
-            <div class="tv-wx-ic">${f.wx.icon}</div>
-            <div class="tv-wx-hi">${f.hi}°</div>
-            <div class="tv-wx-lo">${f.lo}°</div>
-          </div>`).join('')}
-      </div>
-      <div class="tv-subtext">SOURCE: OPEN-METEO.COM — UPDATED: <span id="tv-wx-upd">${_nowTime()}</span></div>`;
+      <div class="tv-wx-city-grid">${cityCards}</div>
+      ${forecast.length ? `
+        <div class="tv-divider" style="border-color:${ch.accent}55"></div>
+        <div class="tv-section-lbl">5-DAY FORECAST — ${locations[0].city.toUpperCase()}</div>
+        <div class="tv-wx-forecast">
+          ${forecast.map(f => `
+            <div class="tv-wx-day">
+              <div class="tv-wx-dn">${f.day}</div>
+              <div class="tv-wx-ic">${f.wx.icon}</div>
+              <div class="tv-wx-hi">${f.hi}°</div>
+              <div class="tv-wx-lo">${f.lo}°</div>
+            </div>`).join('')}
+        </div>` : ''}
+      ${disasterHtml}
+      <div class="tv-subtext">OPEN-METEO.COM · NOMINATIM.OSM.ORG · NASA EONET — UPDATED: <span id="tv-wx-upd2">${_nowTime()}</span></div>`;
 
-    // Refresh time label every minute
     _liveTimer = setInterval(() => {
       if (ep !== _epoch) return;
-      const el = c.querySelector('#tv-wx-upd');
-      if (el) el.textContent = _nowTime();
+      ['#tv-wx-upd', '#tv-wx-upd2'].forEach(sel => {
+        const el = c.querySelector(sel); if (el) el.textContent = _nowTime();
+      });
     }, 60000);
 
   } catch (err) {
@@ -388,11 +490,10 @@ async function _weather(ch, ep) {
   }
 }
 
-// ── ③ MARKETS — CoinGecko crypto prices ──────────────────────────────────────
-// Six coins chosen as the most widely recognised by a general audience.
-const COIN_IDS   = ['bitcoin', 'ethereum', 'solana', 'binancecoin', 'cardano', 'ripple'];
-const COIN_LABEL = { bitcoin:'BTC', ethereum:'ETH', solana:'SOL', binancecoin:'BNB', cardano:'ADA', ripple:'XRP' };
-const COIN_NAME  = { bitcoin:'Bitcoin', ethereum:'Ethereum', solana:'Solana', binancecoin:'BNB', cardano:'Cardano', ripple:'Ripple' };
+// ── ③ MARKETS — CoinGecko crypto + Yahoo Finance equities ────────────────────
+const COIN_IDS   = ['bitcoin','ethereum','solana','binancecoin','cardano','ripple','dogecoin','avalanche-2','chainlink','polkadot'];
+const COIN_LABEL = { bitcoin:'BTC', ethereum:'ETH', solana:'SOL', binancecoin:'BNB', cardano:'ADA', ripple:'XRP', dogecoin:'DOGE', 'avalanche-2':'AVAX', chainlink:'LINK', polkadot:'DOT' };
+const COIN_NAME  = { bitcoin:'Bitcoin', ethereum:'Ethereum', solana:'Solana', binancecoin:'BNB', cardano:'Cardano', ripple:'Ripple', dogecoin:'Dogecoin', 'avalanche-2':'Avalanche', chainlink:'Chainlink', polkadot:'Polkadot' };
 // ISO 3166-1 alpha-2 codes for Eurozone countries — used to show EUR instead of USD.
 const EUROZONE   = new Set(['AT','BE','CY','EE','FI','FR','DE','GR','IE','IT','LV','LT','LU','MT','NL','PT','SK','SI','ES']);
 
@@ -408,109 +509,183 @@ async function _markets(ch, ep) {
     if (EUROZONE.has(loc.cc)) { currency = 'eur'; currSym = '€'; }
   } catch { /* default USD */ }
 
-  const fetchCoins = async () => {
+  const _fmtPrice = (p, sym) => {
+    const s = p >= 1000
+      ? p.toLocaleString('en-US', { maximumFractionDigits: 0 })
+      : p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+    return `${sym}${s}`;
+  };
+
+  const _chgHtml = chg => {
+    const col = chg >= 0 ? '#00ff99' : '#ff4444';
+    return `<span style="color:${col}">${chg >= 0 ? '▲' : '▼'} ${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%</span>`;
+  };
+
+  const fetchAll = async () => {
+    // ── Crypto prices (CoinGecko) ───────────────────────────────────────────
+    let coins = [];
+    let cryptoRows = '';
     try {
       const r = await fetch(
         `https://api.coingecko.com/api/v3/coins/markets` +
         `?vs_currency=${currency}&ids=${COIN_IDS.join(',')}` +
-        `&order=market_cap_desc&per_page=6&sparkline=false`
+        `&order=market_cap_desc&per_page=10&sparkline=false`
       );
       if (ep !== _epoch) return;
-      const coins = await r.json();
+      coins = await r.json();
       if (ep !== _epoch) return;
       if (!Array.isArray(coins) || !coins.length) throw new Error('Empty response');
-
-      const rows = coins.map(coin => {
-        const chg   = coin.price_change_percentage_24h || 0;
-        const col   = chg >= 0 ? '#00ff99' : '#ff4444';
-        const arrow = chg >= 0 ? '▲' : '▼';
-        const sign  = chg >= 0 ? '+' : '';
-        const price = coin.current_price >= 1000
-          ? coin.current_price.toLocaleString('en-US', { maximumFractionDigits: 0 })
-          : coin.current_price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+      cryptoRows = coins.map(coin => {
+        const chg = coin.price_change_percentage_24h || 0;
         return `<div class="tv-row">
           <span class="tv-stk-s">${COIN_LABEL[coin.id] || coin.symbol.toUpperCase()}</span>
           <span class="tv-stk-n">${COIN_NAME[coin.id] || coin.name}</span>
-          <span class="tv-stk-p">${currSym}${price}</span>
-          <span style="color:${col}">${arrow} ${sign}${chg.toFixed(2)}%</span>
+          <span class="tv-stk-p">${_fmtPrice(coin.current_price, currSym)}</span>
+          ${_chgHtml(chg)}
         </div>`;
       }).join('');
-
-      c.innerHTML = `
-        <div class="tv-mkt-hdr">
-          <span class="tv-mkt-title" style="color:${ch.accent}">CRYPTO MARKETS — LIVE</span>
-          <span class="tv-clock">${_nowTime()}</span>
-        </div>
-        <div class="tv-divider" style="border-color:${ch.accent}55"></div>
-        <div class="tv-stk-block">${rows}</div>
-        <div class="tv-subtext">SOURCE: COINGECKO.COM — PRICES IN ${currency.toUpperCase()} — AUTO-REFRESH 60S</div>`;
-
     } catch (err) {
       if (ep !== _epoch) return;
-      // If rate-limited, show a gentle message rather than an error
       const msg = err.message.includes('429') ? 'RATE LIMITED — RETRYING IN 60S...' : err.message;
-      _error(c, 'MARKET DATA UNAVAILABLE', msg);
+      cryptoRows = `<div class="tv-mkt-err">CRYPTO DATA UNAVAILABLE — ${msg}</div>`;
     }
+
+    // ── Global market overview (CoinGecko global + Fear & Greed) ────────────
+    let overviewRows = '';
+    const [globalRes, fngRes] = await Promise.all([
+      fetch('https://api.coingecko.com/api/v3/global').then(r => r.json()).catch(() => null),
+      fetch('https://api.alternative.me/fng/?limit=1').then(r => r.json()).catch(() => null),
+    ]);
+    if (ep !== _epoch) return;
+
+    if (globalRes?.data) {
+      const g    = globalRes.data;
+      const mcap = g.total_market_cap?.[currency] ?? 0;
+      const vol  = g.total_volume?.[currency] ?? 0;
+      const btc  = g.market_cap_percentage?.btc ?? 0;
+      const mcapChg = g.market_cap_change_percentage_24h_usd ?? 0;
+      const fng  = fngRes?.data?.[0];
+      const _big = n => n >= 1e12 ? `${(n / 1e12).toFixed(2)}T`
+                      : n >= 1e9  ? `${(n / 1e9).toFixed(1)}B`
+                      : `${n}`;
+      // Derive top gainer / loser from coin data already fetched
+      const sorted     = [...coins].sort((a, b) => (b.price_change_percentage_24h || 0) - (a.price_change_percentage_24h || 0));
+      const topGainer  = sorted[0];
+      const topLoser   = sorted[sorted.length - 1];
+
+      overviewRows = `
+        <div class="tv-row">
+          <span class="tv-stk-s">MCAP</span>
+          <span class="tv-stk-n">Global Market Cap</span>
+          <span class="tv-stk-p">${currSym}${_big(mcap)}</span>
+          ${_chgHtml(mcapChg)}
+        </div>
+        <div class="tv-row">
+          <span class="tv-stk-s">VOL</span>
+          <span class="tv-stk-n">24H Trading Volume</span>
+          <span class="tv-stk-p">${currSym}${_big(vol)}</span>
+          <span style="color:var(--tv-ph-dim)">— —</span>
+        </div>
+        <div class="tv-row">
+          <span class="tv-stk-s">BTC</span>
+          <span class="tv-stk-n">BTC Dominance</span>
+          <span class="tv-stk-p">${btc.toFixed(1)}%</span>
+          <span style="color:var(--tv-ph-dim)">— —</span>
+        </div>
+        ${fng ? `<div class="tv-row">
+          <span class="tv-stk-s">F&amp;G</span>
+          <span class="tv-stk-n">Fear &amp; Greed Index</span>
+          <span class="tv-stk-p">${fng.value} — ${fng.value_classification.toUpperCase()}</span>
+          <span style="color:var(--tv-ph-dim)">— —</span>
+        </div>` : ''}
+        ${topGainer ? `<div class="tv-row">
+          <span class="tv-stk-s" style="color:#00ff99">↑ TOP</span>
+          <span class="tv-stk-n">${COIN_NAME[topGainer.id] || topGainer.name}</span>
+          <span class="tv-stk-p">${_fmtPrice(topGainer.current_price, currSym)}</span>
+          ${_chgHtml(topGainer.price_change_percentage_24h || 0)}
+        </div>` : ''}
+        ${topLoser ? `<div class="tv-row">
+          <span class="tv-stk-s" style="color:#ff4444">↓ BOT</span>
+          <span class="tv-stk-n">${COIN_NAME[topLoser.id] || topLoser.name}</span>
+          <span class="tv-stk-p">${_fmtPrice(topLoser.current_price, currSym)}</span>
+          ${_chgHtml(topLoser.price_change_percentage_24h || 0)}
+        </div>` : ''}`;
+    }
+
+    if (ep !== _epoch) return;
+    c.innerHTML = `
+      <div class="tv-mkt-hdr">
+        <span class="tv-mkt-title" style="color:${ch.accent}">MARKETS — LIVE</span>
+        <span class="tv-clock" id="tv-mkt-clk">${_nowTime()}</span>
+      </div>
+      <div class="tv-divider" style="border-color:${ch.accent}55"></div>
+      <div class="tv-mkt-scroll">
+        <div class="tv-section-lbl">CRYPTOCURRENCY (${currency.toUpperCase()})</div>
+        <div class="tv-stk-block">${cryptoRows}</div>
+        <div class="tv-section-lbl" style="margin-top:0.55rem">MARKET OVERVIEW</div>
+        <div class="tv-stk-block">${overviewRows}</div>
+      </div>
+      <div class="tv-subtext">COINGECKO.COM · ALTERNATIVE.ME — AUTO-REFRESH 60S</div>`;
   };
 
-  await fetchCoins();
-  // Auto-refresh every 60 000 ms (1 minute) — CoinGecko free tier allows ~30 req/min,
-  // so 1-minute intervals keep well within the rate limit even if the tab stays open for hours.
-  _liveTimer = setInterval(fetchCoins, 60000);
+  await fetchAll();
+  // Single timer: tick clock every second, re-fetch data every 60 ticks
+  let _tick = 0;
+  _liveTimer = setInterval(() => {
+    if (ep !== _epoch) return;
+    const clk = document.querySelector('#tv-mkt-clk');
+    if (clk) clk.textContent = _nowTime();
+    if (++_tick % 60 === 0) fetchAll();
+  }, 1000);
 }
 
-// ── ④ SPORTS — ESPN NBA scoreboard (no key needed) ───────────────────────────
+// ── ④ SPORTS — ESPN NBA + NFL + NHL scoreboards ───────────────────────────────
 async function _sports(ch, ep) {
   const c = _div('tv-sports');
   _loading(c, 'FETCHING SPORTS DATA...');
   _content.appendChild(c);
 
   try {
-    const r = await fetch('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard');
+    const [nba, nfl, nhl] = await Promise.all([
+      fetch('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard').then(r => r.json()).catch(() => null),
+      fetch('https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard').then(r => r.json()).catch(() => null),
+      fetch('https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard').then(r => r.json()).catch(() => null),
+    ]);
     if (ep !== _epoch) return;
-    const d = await r.json();
-    if (ep !== _epoch) return;
 
-    // Limit to 6 games so the scoreboard fits without scrolling inside the TV overlay.
-    const events = (d.events || []).slice(0, 6);
-
-    if (!events.length) {
-      c.innerHTML = `
-        <div class="tv-spt-hdr">
-          <span class="tv-spt-title" style="color:${ch.accent}">NBA — NO GAMES TODAY</span>
-          <span class="tv-clock">${_nowTime()}</span>
-        </div>
-        <div class="tv-divider" style="border-color:${ch.accent}55"></div>
-        <div class="tv-subtext">CHECK BACK ON GAME NIGHT — SOURCE: ESPN</div>`;
-      return;
-    }
-
-    const rows = events.map(ev => {
-      // ESPN API shape: each event has one competitions[] entry with 2 competitors.
-      // homeAway field is 'home' or 'away'; fall back to index order if missing.
-      const comp = ev.competitions[0];
-      const home = comp.competitors.find(t => t.homeAway === 'home') || comp.competitors[0];
-      const away = comp.competitors.find(t => t.homeAway === 'away') || comp.competitors[1];
-      // shortDetail gives compact status like "Q3 8:42" or "Final"; description is the verbose fallback.
-      const status = ev.status?.type?.shortDetail || ev.status?.type?.description || '';
-      return `
-        <div class="tv-game">
-          <div class="tv-game-teams">
-            <div class="tv-team">${away.team.abbreviation}<span class="tv-score">${away.score ?? '-'}</span></div>
-            <div class="tv-team">${home.team.abbreviation}<span class="tv-score">${home.score ?? '-'}</span></div>
-          </div>
-          <span class="tv-game-st">${status}</span>
-        </div>`;
-    }).join('');
+    const _renderLeague = (data, limit = 5) => {
+      const events = (data?.events || []).slice(0, limit);
+      if (!events.length) return `<div class="tv-no-games">NO GAMES SCHEDULED</div>`;
+      return events.map(ev => {
+        const comp   = ev.competitions[0];
+        const home   = comp.competitors.find(t => t.homeAway === 'home') || comp.competitors[0];
+        const away   = comp.competitors.find(t => t.homeAway === 'away') || comp.competitors[1];
+        const status = ev.status?.type?.shortDetail || ev.status?.type?.description || '';
+        return `
+          <div class="tv-game">
+            <div class="tv-game-teams">
+              <div class="tv-team">${away.team.abbreviation}<span class="tv-score">${away.score ?? '-'}</span></div>
+              <div class="tv-team">${home.team.abbreviation}<span class="tv-score">${home.score ?? '-'}</span></div>
+            </div>
+            <span class="tv-game-st">${status}</span>
+          </div>`;
+      }).join('');
+    };
 
     c.innerHTML = `
       <div class="tv-spt-hdr">
-        <span class="tv-spt-title" style="color:${ch.accent}">NBA — SCOREBOARD</span>
+        <span class="tv-spt-title" style="color:${ch.accent}">SPORTS ROUNDUP</span>
         <span class="tv-clock">${_nowTime()}</span>
       </div>
       <div class="tv-divider" style="border-color:${ch.accent}55"></div>
-      <div class="tv-section-lbl">TODAY'S GAMES</div>
-      <div class="tv-games">${rows}</div>
+      <div class="tv-spt-scroll">
+        <div class="tv-section-lbl">🏀 NBA</div>
+        <div class="tv-games">${_renderLeague(nba)}</div>
+        <div class="tv-section-lbl" style="margin-top:0.6rem">🏈 NFL</div>
+        <div class="tv-games">${_renderLeague(nfl)}</div>
+        <div class="tv-section-lbl" style="margin-top:0.6rem">🏒 NHL</div>
+        <div class="tv-games">${_renderLeague(nhl)}</div>
+      </div>
       <div class="tv-subtext">SOURCE: ESPN.COM — UPDATED: ${_nowTime()}</div>`;
 
   } catch (err) {

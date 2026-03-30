@@ -32,7 +32,7 @@ export function startPong(canvas, onGameOver) {
 
   const PLAYER_SPD = H * 0.011;
   const CPU_SPD    = H * 0.0085;
-  const BALL_INIT  = W * 0.0065;
+  const BALL_INIT  = W * 0.0032;
   const BALL_MAX   = W * 0.022;
 
   // ── State ─────────────────────────────────────────────────────────────────────

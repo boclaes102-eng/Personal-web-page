@@ -18,8 +18,9 @@ let musicGain    = null;
 let sfxGain      = null;
 let _musicReverb = null;
 
-let _ambientActive = false;
-let _noteTimeout   = null;
+let _ambientActive  = false;
+let _noteTimeout    = null;
+let _pendingAmbient = false;  // true when startAmbient() was called before initAudio()
 
 // ── Init (call once on first user gesture) ────────────────────────────────────
 export function initAudio() {
@@ -50,6 +51,13 @@ export function initAudio() {
     if (!ctx) return;
     document.hidden ? ctx.suspend() : ctx.resume();
   });
+
+  // If startAmbient() was called before the AudioContext existed (auto-login path),
+  // start it now that the context is ready.
+  if (_pendingAmbient) {
+    _pendingAmbient = false;
+    startAmbient();
+  }
 }
 
 // ── Utility: synthetic reverb (random impulse response) ──────────────────────
@@ -85,7 +93,8 @@ function _noise(dur) {
 // A recursive timer adds solo melody notes from A-minor pentatonic every 4–12 s.
 
 export function startAmbient() {
-  if (!ctx || _ambientActive) return;
+  if (!ctx) { _pendingAmbient = true; return; }  // auto-login: defer until first gesture
+  if (_ambientActive) return;
   _ambientActive = true;
 
   // Fade music gain in from silence over 5 s so it builds gradually

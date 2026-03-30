@@ -277,6 +277,90 @@
 .tv-wx-hi   { font-size: 0.88em; font-weight: bold; }
 .tv-wx-lo   { font-size: 0.76em; color: var(--tv-ph-dim); }
 
+/* ── ② WEATHER — city grid ────────────────────────────────── */
+.tv-wx-city-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+  flex-shrink: 0;
+  margin: 0.35rem 0;
+}
+.tv-wx-city-card {
+  border: 1px solid var(--tv-ph-dk);
+  padding: 0.38rem 0.55rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+.tv-wx-card-name {
+  font-size: 0.72em;
+  font-weight: bold;
+  letter-spacing: 0.1em;
+  color: var(--tv-ph-dim);
+}
+.tv-wx-card-main {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+.tv-wx-card-icon  { font-size: 1.15rem; }
+.tv-wx-card-temp  { font-size: 1.35rem; font-weight: bold; }
+.tv-wx-card-feel  { font-size: 0.75em; color: var(--tv-ph-dk); }
+.tv-wx-card-cond  { font-size: 0.7em; color: var(--tv-ph-dim); letter-spacing: 0.06em; }
+.tv-wx-card-detail {
+  display: flex;
+  gap: 0.65rem;
+  font-size: 0.67em;
+  color: var(--tv-ph-dk);
+  margin-top: 0.08rem;
+}
+
+/* ── ② WEATHER — disaster box ────────────────────────────── */
+.tv-disaster-box {
+  border: 1px solid rgba(255, 120, 50, 0.22);
+  background: rgba(255, 80, 20, 0.04);
+  padding: 0.3rem 0.5rem;
+  flex-shrink: 0;
+}
+.tv-disaster-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.75em;
+  padding: 0.14rem 0;
+  border-bottom: 1px solid var(--tv-ph-dk);
+}
+.tv-disaster-row:last-child { border-bottom: none; }
+.tv-disaster-icon { flex-shrink: 0; font-size: 0.95em; }
+.tv-disaster-cat  {
+  flex-shrink: 0;
+  min-width: 5.5rem;
+  font-weight: bold;
+  color: #ff8844;
+  letter-spacing: 0.05em;
+  font-size: 0.9em;
+}
+.tv-disaster-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--tv-ph);
+}
+.tv-disaster-date {
+  flex-shrink: 0;
+  color: var(--tv-ph-dim);
+  font-size: 0.88em;
+  min-width: 4rem;
+  text-align: right;
+}
+.tv-no-events {
+  font-size: 0.75em;
+  color: var(--tv-ph-dk);
+  letter-spacing: 0.08em;
+  padding: 0.15rem 0;
+}
+
 /* ── ③ MARKETS ────────────────────────────────────────────── */
 .tv-stocks { display: flex; flex-direction: column; height: 100%; }
 
@@ -289,6 +373,22 @@
 .tv-mkt-title { font-weight: bold; font-size: 0.95em; letter-spacing: 0.12em; }
 
 .tv-idx-block, .tv-stk-block { flex-shrink: 0; }
+
+.tv-mkt-scroll {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+.tv-mkt-scroll::-webkit-scrollbar { width: 3px; }
+.tv-mkt-scroll::-webkit-scrollbar-track { background: transparent; }
+.tv-mkt-scroll::-webkit-scrollbar-thumb { background: var(--tv-ph-dk); border-radius: 2px; }
+
+.tv-mkt-err {
+  font-size: 0.74em;
+  color: #ff4444;
+  letter-spacing: 0.06em;
+  padding: 0.25rem 0;
+}
 
 .tv-row {
   display: flex;
@@ -314,6 +414,22 @@
   margin-bottom: 0.25rem;
 }
 .tv-spt-title { font-weight: bold; letter-spacing: 0.12em; }
+
+.tv-spt-scroll {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+.tv-spt-scroll::-webkit-scrollbar { width: 3px; }
+.tv-spt-scroll::-webkit-scrollbar-track { background: transparent; }
+.tv-spt-scroll::-webkit-scrollbar-thumb { background: var(--tv-ph-dk); border-radius: 2px; }
+
+.tv-no-games {
+  font-size: 0.74em;
+  color: var(--tv-ph-dk);
+  letter-spacing: 0.08em;
+  padding: 0.25rem 0;
+}
 
 .tv-games { display: flex; flex-direction: column; gap: 0.45rem; flex-shrink: 0; }
 

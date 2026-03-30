@@ -10,7 +10,7 @@ import { shared }                              from './state.js';
 import { frames }                              from '../scene/frames.js';
 import { showOverlay, hideOverlay,
          showLore,    hideLore }               from './overlay.js';
-import { showTerminal, hideTerminal }          from '../pc/terminal.js';
+import { showDesktop, hideDesktop }            from '../pc/desktop.js';
 import { showTV, hideTV }                      from '../tv/tv-channels.js';
 import { showArcade, hideArcade }              from '../arcade/arcade-ui.js';
 import { sfx, duckMusic, unduckMusic }         from '../audio/audio-manager.js';
@@ -78,7 +78,7 @@ export function zoomIn(group) {
       if (isComputer) {
         _currentZoomType = 'computer';
         duckMusic();
-        showTerminal(() => zoomOut());
+        showDesktop(() => zoomOut());
       } else if (isTelevision) {
         _currentZoomType = 'television';
         duckMusic();
@@ -139,8 +139,7 @@ export function zoomOut() {
   cam.mode = 'transitioning';
 
   if (_currentZoomType === 'computer') {
-    // CRT shutdown plays first, camera flies back after
-    hideTerminal(_doZoomOut);
+    hideDesktop(_doZoomOut);
   } else if (_currentZoomType === 'television') {
     hideTV(_doZoomOut);
   } else if (_currentZoomType === 'arcade') {

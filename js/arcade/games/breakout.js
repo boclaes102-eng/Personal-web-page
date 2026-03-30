@@ -27,7 +27,7 @@ export function startBreakout(canvas, onGameOver) {
   const BALL_R  = Math.round(H * 0.014);   // ~7 px
 
   // Ball speed progression (pixels/frame at 60 fps)
-  const BALL_SPD_INIT  = W * 0.005;   // slow start — feels manageable
+  const BALL_SPD_INIT  = W * 0.0028;  // slow start — feels manageable
   const BALL_SPD_MAX   = W * 0.015;   // hard cap — fast but fair
   const BALL_SPD_BRICK = W * 0.0002;  // gained per brick destroyed
   const BALL_SPD_PAD   = W * 0.0003;  // gained every 4th paddle bounce
@@ -37,7 +37,7 @@ export function startBreakout(canvas, onGameOver) {
   const ROWS      = 6;
   const BRICK_GAP = Math.round(W * 0.006); // ~5 px gap between bricks
   const BRICK_W   = (W - BRICK_GAP * (COLS + 1)) / COLS;
-  const BRICK_H   = Math.round(H * 0.058);
+  const BRICK_H   = Math.round(H * 0.038);
   const GRID_TOP  = H * 0.10;              // bricks start 10% from top
 
   // Row definitions (bottom row = index 0 in ROWS):
@@ -58,7 +58,10 @@ export function startBreakout(canvas, onGameOver) {
   // ── State ─────────────────────────────────────────────────────────────────────
   let padX = W / 2 - PAD_W / 2;
   let bx, by, vx, vy;
-  let launched = false;    // ball sticks to paddle until Space pressed
+  let launched      = false;   // ball sticks to paddle until player acts
+  let readyToLaunch = true;    // false during post-life-loss countdown
+  let countVal      = 0;       // countdown number (3→2→1→GO)
+  let countTickId   = null;
 
   let score = 0;
   let lives = 3;
@@ -72,8 +75,8 @@ export function startBreakout(canvas, onGameOver) {
   const keys = new Set();
   const onKey  = e => {
     if (!e.repeat) keys.add(e.key);
-    // Launch on space or arrow
-    if ((e.key === ' ' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !launched) {
+    // Launch only when countdown has finished
+    if ((e.key === ' ' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !launched && readyToLaunch) {
       launched = true;
     }
   };
@@ -86,9 +89,25 @@ export function startBreakout(canvas, onGameOver) {
     const rect = canvas.getBoundingClientRect();
     const mx   = (e.clientX - rect.left) * (W / rect.width);
     padX = Math.max(0, Math.min(W - PAD_W, mx - PAD_W / 2));
-    if (!launched) launched = true;
+    if (!launched && readyToLaunch) launched = true;
   };
   canvas.addEventListener('mousemove', onMouseMove);
+
+  // ── Post-life countdown ───────────────────────────────────────────────────────
+  function startRespawnCountdown() {
+    readyToLaunch = false;
+    launched      = false;
+    countVal      = 3;
+    clearInterval(countTickId);
+    countTickId = setInterval(() => {
+      if (countVal === 0) {
+        clearInterval(countTickId);
+        readyToLaunch = true;
+        return;
+      }
+      countVal--;
+    }, 700);
+  }
 
   // ── Brick array ────────────────────────────────────────────────────────────────
   // bricks[row][col] — row 0 = visually topmost
@@ -216,8 +235,22 @@ export function startBreakout(canvas, onGameOver) {
     ctx.fill();
     ctx.shadowBlur = 0;
 
-    // "PRESS SPACE" hint when ball is on paddle
-    if (!launched) {
+    // Post-life countdown overlay
+    if (!readyToLaunch) {
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle    = '#ffffff';
+      ctx.shadowColor  = '#ffffff';
+      ctx.shadowBlur   = 30;
+      ctx.font         = `bold ${Math.round(H * 0.28)}px "Courier New", monospace`;
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(countVal > 0 ? String(countVal) : 'GO!', W / 2, H / 2);
+      ctx.shadowBlur   = 0;
+    }
+
+    // "PRESS SPACE" hint when ball is on paddle and ready
+    if (!launched && readyToLaunch) {
       ctx.fillStyle    = 'rgba(0,255,204,0.60)';
       ctx.font         = `${Math.round(H * 0.040)}px "Courier New", monospace`;
       ctx.textAlign    = 'center';
@@ -327,6 +360,7 @@ export function startBreakout(canvas, onGameOver) {
         ballSpeed  = BALL_SPD_INIT;
         paddleHits = 0;
         resetBall();
+        startRespawnCountdown();
       }
     }
 
@@ -384,6 +418,7 @@ export function startBreakout(canvas, onGameOver) {
 
   return function stop() {
     cancelAnimationFrame(rafId);
+    clearInterval(countTickId);
     window.removeEventListener('keydown', onKey);
     window.removeEventListener('keyup',   offKey);
     canvas.removeEventListener('mousemove', onMouseMove);

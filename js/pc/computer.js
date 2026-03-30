@@ -83,12 +83,14 @@ function makeScreenTex(hexGlow) {
     ctx.restore();
   };
 
-  g('PANALYZE  v1.0',         W/2,  95, 'bold 30px "Courier New",monospace');
-  g('─────────────────────',  W/2, 128, '18px "Courier New",monospace', 0.45);
-  g('PASSWORD ANALYZER',       W/2, 158, '19px "Courier New",monospace', 0.75);
-  g('─────────────────────',  W/2, 188, '18px "Courier New",monospace', 0.45);
-  g('[ CLICK  TO  INTERACT ]', W/2, 252, '16px "Courier New",monospace', 0.5);
-  g('C:\\PANALYZE>  _',        W/2, 295, '14px "Courier New",monospace', 0.35);
+  g('SECUREOS  v1.0',           W/2,  88, 'bold 30px "Courier New",monospace');
+  g('─────────────────────',   W/2, 122, '18px "Courier New",monospace', 0.45);
+  g('CYBERSECURITY  TOOLKIT',  W/2, 152, '16px "Courier New",monospace', 0.75);
+  g('─────────────────────',   W/2, 182, '18px "Courier New",monospace', 0.45);
+  g('PANALYZE · HASHGEN',      W/2, 218, '13px "Courier New",monospace', 0.55);
+  g('CIPHER · NETINFO · JWT',  W/2, 240, '13px "Courier New",monospace', 0.55);
+  g('[ CLICK  TO  BOOT ]',     W/2, 278, '16px "Courier New",monospace', 0.5);
+  g('C:\\SECUREOS>  _',         W/2, 316, '14px "Courier New",monospace', 0.35);
 
   // Decorative corner brackets — common UI motif on retro terminal software.
   // '33' appended to hexGlow = 20% opacity (0x33 / 0xFF ≈ 0.2).
