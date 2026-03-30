@@ -32,5 +32,11 @@ export const PROJECTS = [
     arcade: true,            // renders as a 3D retro arcade cabinet in the scene
     title: "Arcade",
     glowColor: "#ff44ff",    // neon magenta
+  },
+  {
+    id: 7,
+    phoneBooth: true,        // renders as a 3D retro phone booth in the scene
+    title: "Phone Booth",
+    glowColor: "#ffaa00",    // warm amber
   }
 ];

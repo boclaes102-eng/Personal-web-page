@@ -13,6 +13,7 @@ import { showOverlay, hideOverlay,
 import { showDesktop, hideDesktop }            from '../pc/desktop.js';
 import { showTV, hideTV }                      from '../tv/tv-channels.js';
 import { showArcade, hideArcade }              from '../arcade/arcade-ui.js';
+import { showPhoneUI, hidePhoneUI }            from '../phonebooth/phone-ui.js';
 import { sfx, duckMusic, unduckMusic }         from '../audio/audio-manager.js';
 
 const { gsap } = window;
@@ -57,19 +58,18 @@ export function zoomIn(group) {
   const isComputer    = !!group.userData.isComputer;
   const isTelevision  = !!group.userData.isTelevision;
   const isArcade      = !!group.userData.isArcade;
+  const isPhoneBooth  = !!group.userData.isPhoneBooth;
   const worldPos      = new THREE.Vector3();
-  // For the computer, TV and arcade, target the screen mesh so the camera
-  // centres on the display rather than the group's geometric midpoint.
-  if ((isComputer || isTelevision || isArcade) && group.userData.screenMesh) {
+  // For the computer, TV, arcade, and phone booth, target the screen mesh so
+  // the camera centres on the display rather than the group's geometric midpoint.
+  if ((isComputer || isTelevision || isArcade || isPhoneBooth) && group.userData.screenMesh) {
     group.userData.screenMesh.getWorldPosition(worldPos);
   } else {
     group.getWorldPosition(worldPos);
   }
   const fwd       = new THREE.Vector3(0, 0, 1).applyQuaternion(group.quaternion);
   // Zoom distances tuned so each device fills the viewport comfortably.
-  // Arcade: 2.8 (tall cabinet needs slightly more distance), Computer: 2.2,
-  // TV: 2.5, flat project panel: 3.6.
-  const zoomDist  = isArcade ? 2.8 : isComputer ? 2.2 : isTelevision ? 2.5 : 3.6;
+  const zoomDist  = isArcade ? 2.8 : isComputer ? 2.2 : isTelevision ? 2.5 : isPhoneBooth ? 2.4 : 3.6;
   const camTarget = worldPos.clone().addScaledVector(fwd, zoomDist);
 
   const tl = gsap.timeline({
@@ -87,6 +87,10 @@ export function zoomIn(group) {
         _currentZoomType = 'arcade';
         duckMusic();
         showArcade(() => zoomOut());
+      } else if (isPhoneBooth) {
+        _currentZoomType = 'phonebooth';
+        duckMusic();
+        showPhoneUI(() => zoomOut());
       } else {
         _currentZoomType = 'project';
         showOverlay(group.userData.proj);
@@ -145,6 +149,8 @@ export function zoomOut() {
     hideTV(_doZoomOut);
   } else if (_currentZoomType === 'arcade') {
     hideArcade(_doZoomOut);
+  } else if (_currentZoomType === 'phonebooth') {
+    hidePhoneUI(_doZoomOut);
   } else {
     if (_currentZoomType === 'celestial') hideLore(); else hideOverlay();
     _doZoomOut();

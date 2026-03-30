@@ -16,6 +16,7 @@ import { PROJECTS } from '../projects.js';
 import { buildComputer }    from '../pc/computer.js';
 import { buildTelevision }  from '../tv/television.js';
 import { buildArcade }      from '../arcade/arcade-machine.js';
+import { buildPhoneBooth }  from '../phonebooth/phonebooth.js';
 
 // Flat panel size in Three.js world units (matches the canvas aspect ratio 4:3).
 const FRAME_W = 3.2;
@@ -31,6 +32,7 @@ const FRAME_POLAR = [
   [  0,   5,  14],  // project 0 — straight ahead (computer)
   [ 80,  -5,  13],  // project 1 — right (television)
   [248,   5,  11],  // project 2 — left, closer (arcade cabinet)
+  [160,  -4,  13],  // project 3 — behind-right (phone booth)
 ];
 
 export const frames       = [];
@@ -237,6 +239,25 @@ export function buildFrames() {
         floatPhase: Math.random() * Math.PI * 2,
         floatAmp:   0.24 + Math.random() * 0.09,  // 0.24–0.33 world units
         floatSpeed: 0.15 + Math.random() * 0.07,  // 0.15–0.22 rad/s
+      });
+      clickTarget.userData.frameGroup = group;
+      clickTargets.push(clickTarget);
+      scene.add(group);
+      frames.push(group);
+      return;
+    }
+
+    // ── Phone booth variant ───────────────────────────────────────────────────
+    if (proj.phoneBooth) {
+      const { group, clickTarget } = buildPhoneBooth(proj);
+      group.position.copy(wp);
+      group.lookAt(0, 0, 0);
+      Object.assign(group.userData, {
+        baseQuat:   group.quaternion.clone(),
+        baseY:      wp.y,
+        floatPhase: Math.random() * Math.PI * 2,
+        floatAmp:   0.20 + Math.random() * 0.08,
+        floatSpeed: 0.13 + Math.random() * 0.07,
       });
       clickTarget.userData.frameGroup = group;
       clickTargets.push(clickTarget);

@@ -560,6 +560,57 @@ function _breakoutLevelClear() {
   });
 }
 
+// ── Phone booth SFX ──────────────────────────────────────────────────────────
+
+// Classic telephone ring — two alternating tones (480 Hz + 620 Hz)
+// patterned as: 0.4s on · 0.2s gap · 0.4s on  (one double-ring)
+function _phoneRing() {
+  const t = ctx.currentTime;
+  [0, 0.6].forEach(offset => {
+    const dur = 0.4;
+    const st  = t + offset;
+    [480, 620].forEach(freq => {
+      const osc = ctx.createOscillator(); osc.type = 'sine'; osc.frequency.value = freq;
+      const g   = ctx.createGain();
+      g.gain.setValueAtTime(0, st);
+      g.gain.linearRampToValueAtTime(0.18, st + 0.02);
+      g.gain.setValueAtTime(0.18, st + dur - 0.03);
+      g.gain.linearRampToValueAtTime(0, st + dur);
+      osc.connect(g); g.connect(sfxGain);
+      osc.start(st); osc.stop(st + dur);
+    });
+  });
+}
+
+function _phonePickup() {
+  const t = ctx.currentTime;
+  // Short click + rising tone: handset lifted
+  const noise = ctx.createBufferSource();
+  noise.buffer = _noise(0.04);
+  const nf = ctx.createBiquadFilter(); nf.type = 'bandpass'; nf.frequency.value = 1800;
+  const ng = ctx.createGain(); ng.gain.setValueAtTime(0.25, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+  noise.connect(nf); nf.connect(ng); ng.connect(sfxGain); noise.start(t);
+  // Dial tone snippet (350 Hz + 440 Hz) fades in
+  [350, 440].forEach(freq => {
+    const osc = ctx.createOscillator(); osc.type = 'sine'; osc.frequency.value = freq;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, t + 0.05);
+    g.gain.linearRampToValueAtTime(0.08, t + 0.18);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
+    osc.connect(g); g.connect(sfxGain); osc.start(t + 0.05); osc.stop(t + 0.45);
+  });
+}
+
+function _phoneHangup() {
+  const t = ctx.currentTime;
+  // Quick descending thud
+  const osc = ctx.createOscillator(); osc.type = 'sine';
+  osc.frequency.setValueAtTime(320, t); osc.frequency.exponentialRampToValueAtTime(55, t + 0.18);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.30, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+  osc.connect(g); g.connect(sfxGain); osc.start(t); osc.stop(t + 0.22);
+}
+
 // ── SFX dispatcher ────────────────────────────────────────────────────────────
 const _sfxMap = {
   'zoom-in':              _zoomIn,
@@ -587,6 +638,9 @@ const _sfxMap = {
   'breakout-paddle':      _breakoutPaddle,
   'breakout-life-lost':   _breakoutLifeLost,
   'breakout-level-clear': _breakoutLevelClear,
+  'phone-ring':           _phoneRing,
+  'phone-pickup':         _phonePickup,
+  'phone-hangup':         _phoneHangup,
 };
 
 export function sfx(name, opts = {}) {

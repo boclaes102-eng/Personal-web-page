@@ -87,8 +87,8 @@ function makeScreenTex(hexGlow) {
   g('─────────────────────',   W/2, 122, '18px "Courier New",monospace', 0.45);
   g('CYBERSECURITY  TOOLKIT',  W/2, 152, '16px "Courier New",monospace', 0.75);
   g('─────────────────────',   W/2, 182, '18px "Courier New",monospace', 0.45);
-  g('PANALYZE · HASHGEN',      W/2, 218, '13px "Courier New",monospace', 0.55);
-  g('CIPHER · NETINFO · JWT',  W/2, 240, '13px "Courier New",monospace', 0.55);
+  g('PANALYZE · HASHGEN · CIPHER',    W/2, 214, '12px "Courier New",monospace', 0.55);
+  g('NETINFO · JWT · MAILSPY · PENGUIDE', W/2, 234, '11px "Courier New",monospace', 0.55);
   g('[ CLICK  TO  BOOT ]',     W/2, 278, '16px "Courier New",monospace', 0.5);
   g('C:\\SECUREOS>  _',         W/2, 316, '14px "Courier New",monospace', 0.35);
 

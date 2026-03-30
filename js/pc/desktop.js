@@ -94,6 +94,38 @@ const APPS = [
     ],
     loader: () => import('./tools/jwtdec.js'),
   },
+  {
+    id:   'mailspy',
+    exe:  'MAILSPY.EXE',
+    name: 'Email Checker',
+    desc: 'Breach lookup &\ndata broker check',
+    art: [
+      ' _______ ',
+      '|       |',
+      '|\\ @ @ /|',
+      '| \\___/ |',
+      '|   #   |',
+      '|_______|',
+      ' INBOX?  ',
+    ],
+    loader: () => import('./tools/mailspy.js'),
+  },
+  {
+    id:   'penguide',
+    exe:  'PENGUIDE.EXE',
+    name: 'Pentest Guide',
+    desc: 'Interactive analyst\nchecklist + commands',
+    art: [
+      '.-------.',
+      '|>nmap  |',
+      '|>nessus|',
+      '|>blood |',
+      '|[X][ ] |',
+      "'--.--.-'",
+      ' PENTEST ',
+    ],
+    loader: () => import('./tools/penguide.js'),
+  },
 ];
 
 // ── State ─────────────────────────────────────────────────────────────────────
