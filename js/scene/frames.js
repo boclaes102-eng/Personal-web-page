@@ -31,8 +31,8 @@ const FRAME_H = 2.4;
 const FRAME_POLAR = [
   [  0,   5,  14],  // project 0 — straight ahead (computer)
   [ 80,  -5,  13],  // project 1 — right (television)
-  [248,   5,  11],  // project 2 — left, closer (arcade cabinet)
-  [160,  -4,  13],  // project 3 — behind-right (phone booth)
+  [248,   5,   9],  // project 2 — left, closer (arcade cabinet)
+  [160,  -4,  10],  // project 3 — behind-right (phone booth)
 ];
 
 export const frames       = [];

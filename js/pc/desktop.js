@@ -126,6 +126,22 @@ const APPS = [
     ],
     loader: () => import('./tools/penguide.js'),
   },
+  {
+    id:   'github',
+    exe:  'GITHUB.EXE',
+    name: 'GitHub Profile',
+    desc: 'boclaes102-eng\n// legendary repos',
+    art: [
+      '  .---.  ',
+      ' /o   o\\ ',
+      '|  ---  |',
+      ' \\ ___ / ',
+      '  )   (  ',
+      ' /_) (_\\ ',
+      ' GITHUB  ',
+    ],
+    loader: () => import('./tools/github.js'),
+  },
 ];
 
 // ── State ─────────────────────────────────────────────────────────────────────

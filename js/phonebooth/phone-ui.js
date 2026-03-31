@@ -768,6 +768,11 @@ function _build() {
   // ─ Close ─
   hangup.addEventListener('click', () => _onHangup?.());
 
+  // Keypress beep on all phone inputs
+  _el.addEventListener('input', e => {
+    if (e.target.matches('.ph-input')) sfx('phone-keypress');
+  });
+
   _keyHandler = e => {
     if (e.key === 'Escape') { e.stopPropagation(); _onHangup?.(); }
   };

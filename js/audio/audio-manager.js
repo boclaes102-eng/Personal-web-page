@@ -603,12 +603,49 @@ function _phonePickup() {
 
 function _phoneHangup() {
   const t = ctx.currentTime;
-  // Quick descending thud
-  const osc = ctx.createOscillator(); osc.type = 'sine';
-  osc.frequency.setValueAtTime(320, t); osc.frequency.exponentialRampToValueAtTime(55, t + 0.18);
-  const g = ctx.createGain();
-  g.gain.setValueAtTime(0.30, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
-  osc.connect(g); g.connect(sfxGain); osc.start(t); osc.stop(t + 0.22);
+  // Mechanical clack: sharp noise burst (handset hitting cradle)
+  const clack = ctx.createBufferSource();
+  clack.buffer = _noise(0.08);
+  const cf = ctx.createBiquadFilter(); cf.type = 'bandpass'; cf.frequency.value = 1200; cf.Q.value = 2;
+  const cg = ctx.createGain();
+  cg.gain.setValueAtTime(0.55, t); cg.gain.exponentialRampToValueAtTime(0.001, t + 0.065);
+  clack.connect(cf); cf.connect(cg); cg.connect(sfxGain); clack.start(t);
+  // Heavy thud (low-end body of the slam)
+  const thud = ctx.createOscillator(); thud.type = 'sine';
+  thud.frequency.setValueAtTime(180, t); thud.frequency.exponentialRampToValueAtTime(35, t + 0.20);
+  const tg = ctx.createGain();
+  tg.gain.setValueAtTime(0.48, t); tg.gain.exponentialRampToValueAtTime(0.001, t + 0.24);
+  thud.connect(tg); tg.connect(sfxGain); thud.start(t); thud.stop(t + 0.24);
+  // Brief dial tone that cuts off abruptly (350+440 Hz — classic North American dial tone)
+  [350, 440].forEach(freq => {
+    const osc = ctx.createOscillator(); osc.type = 'sine'; osc.frequency.value = freq;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.07, t + 0.09);
+    g.gain.setValueAtTime(0.07, t + 0.20);
+    g.gain.linearRampToValueAtTime(0, t + 0.23);
+    osc.connect(g); g.connect(sfxGain); osc.start(t + 0.09); osc.stop(t + 0.24);
+  });
+}
+
+// DTMF-style cell phone keypress tone (randomised dial tone pair for variety)
+const _DTMF_PAIRS = [
+  [697, 1209], [697, 1336], [697, 1477],
+  [770, 1209], [770, 1336], [770, 1477],
+  [852, 1209], [852, 1336], [852, 1477],
+  [941, 1209], [941, 1336],
+];
+function _phoneKeypress() {
+  if (!_canPlay('phone-keypress', 45)) return;
+  const t = ctx.currentTime;
+  const [f1, f2] = _DTMF_PAIRS[Math.floor(Math.random() * _DTMF_PAIRS.length)];
+  [f1, f2].forEach(freq => {
+    const osc = ctx.createOscillator(); osc.type = 'sine'; osc.frequency.value = freq;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.11, t);
+    g.gain.setValueAtTime(0.11, t + 0.075);
+    g.gain.linearRampToValueAtTime(0, t + 0.110);
+    osc.connect(g); g.connect(sfxGain); osc.start(t); osc.stop(t + 0.115);
+  });
 }
 
 // ── SFX dispatcher ────────────────────────────────────────────────────────────
@@ -641,6 +678,7 @@ const _sfxMap = {
   'phone-ring':           _phoneRing,
   'phone-pickup':         _phonePickup,
   'phone-hangup':         _phoneHangup,
+  'phone-keypress':       _phoneKeypress,
 };
 
 export function sfx(name, opts = {}) {
