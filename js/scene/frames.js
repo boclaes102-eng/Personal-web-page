@@ -17,6 +17,7 @@ import { buildComputer }    from '../pc/computer.js';
 import { buildTelevision }  from '../tv/television.js';
 import { buildArcade }      from '../arcade/arcade-machine.js';
 import { buildPhoneBooth }  from '../phonebooth/phonebooth.js';
+import { buildJukebox }     from '../jukebox/jukebox.js';
 
 // Flat panel size in Three.js world units (matches the canvas aspect ratio 4:3).
 const FRAME_W = 3.2;
@@ -33,6 +34,7 @@ const FRAME_POLAR = [
   [ 80,  -5,  13],  // project 1 — right (television)
   [248,   5,   9],  // project 2 — left, closer (arcade cabinet)
   [160,  -4,  10],  // project 3 — behind-right (phone booth)
+  [310,   3,  11],  // project 4 — forward-left (jukebox)
 ];
 
 export const frames       = [];
@@ -258,6 +260,25 @@ export function buildFrames() {
         floatPhase: Math.random() * Math.PI * 2,
         floatAmp:   0.20 + Math.random() * 0.08,
         floatSpeed: 0.13 + Math.random() * 0.07,
+      });
+      clickTarget.userData.frameGroup = group;
+      clickTargets.push(clickTarget);
+      scene.add(group);
+      frames.push(group);
+      return;
+    }
+
+    // ── Jukebox variant ───────────────────────────────────────────────────────
+    if (proj.jukebox) {
+      const { group, clickTarget } = buildJukebox(proj);
+      group.position.copy(wp);
+      group.lookAt(0, 0, 0);
+      Object.assign(group.userData, {
+        baseQuat:   group.quaternion.clone(),
+        baseY:      wp.y,
+        floatPhase: Math.random() * Math.PI * 2,
+        floatAmp:   0.18 + Math.random() * 0.08,
+        floatSpeed: 0.14 + Math.random() * 0.06,
       });
       clickTarget.userData.frameGroup = group;
       clickTargets.push(clickTarget);

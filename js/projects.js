@@ -38,5 +38,11 @@ export const PROJECTS = [
     phoneBooth: true,        // renders as a 3D retro phone booth in the scene
     title: "Phone Booth",
     glowColor: "#ffaa00",    // warm amber
+  },
+  {
+    id: 8,
+    jukebox: true,           // renders as a 3D Wurlitzer-style jukebox in the scene
+    title: "Jukebox",
+    glowColor: "#ff44bb",    // neon pink/magenta
   }
 ];

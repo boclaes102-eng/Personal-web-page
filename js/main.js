@@ -9,8 +9,8 @@ import { buildEnvironment, updateEnvironment } from './scene/environment.js';
 import { buildCelestials, updateCelestials }   from './scene/celestials.js';
 import { buildFrames, animateFrames }          from './scene/frames.js';
 import { setupInput }                          from './core/input.js';
-import { initAudio, startAmbient, stopAmbient } from './audio/audio-manager.js';
-import { parseHashTokens, checkSession, signOut } from './auth/auth.js';
+import { initAudio, startAmbient, stopAmbient, setInitialTheme } from './audio/audio-manager.js';
+import { parseHashTokens, checkSession, signOut, loadUserTheme } from './auth/auth.js';
 import { showAuthOverlay }                     from './auth/auth-ui.js';
 import { sfx }                                 from './audio/audio-manager.js';
 
@@ -98,8 +98,12 @@ function startWorld(user) {
   });
 
   // AudioContext was already created on the first auth-screen gesture.
-  // Call startAmbient() directly — no second click required.
-  startAmbient();
+  // Load the user's saved music theme before starting ambient so the right
+  // theme plays from the first note — no crossfade delay on entry.
+  loadUserTheme().then(theme => {
+    if (theme) setInitialTheme(theme);
+    startAmbient();
+  }).catch(() => startAmbient());
 
   requestAnimationFrame(animate);
 }

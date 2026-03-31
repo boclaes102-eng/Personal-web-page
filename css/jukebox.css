@@ -1,0 +1,210 @@
+/* ── Jukebox overlay ──────────────────────────────────────────────────────── */
+
+.jk-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: #04000c;
+  color: #ff44bb;
+  font-family: "Courier New", monospace;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+/* ── Top bar ─────────────────────────────────────────────────────────────── */
+
+.jk-topbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 9px 18px;
+  border-bottom: 1px solid rgba(255, 68, 187, 0.28);
+  flex-shrink: 0;
+}
+
+.jk-logo {
+  font-size: 19px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-shadow: 0 0 14px rgba(255, 68, 187, 0.9);
+}
+
+.jk-logo-sub {
+  font-size: 11px;
+  opacity: 0.48;
+  letter-spacing: 1.5px;
+}
+
+.jk-eject-btn {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid rgba(255, 68, 187, 0.65);
+  color: #ff44bb;
+  font-family: inherit;
+  font-size: 12px;
+  padding: 5px 14px;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.jk-eject-btn:hover {
+  background: rgba(255, 68, 187, 0.14);
+  border-color: #ff44bb;
+}
+
+/* ── Body layout ─────────────────────────────────────────────────────────── */
+
+.jk-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── Track list ──────────────────────────────────────────────────────────── */
+
+.jk-tracklist {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.jk-track {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 68, 187, 0.18);
+  background: rgba(255, 68, 187, 0.025);
+  cursor: pointer;
+  position: relative;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.jk-track:hover {
+  background: rgba(255, 68, 187, 0.07);
+  border-color: rgba(255, 68, 187, 0.45);
+}
+
+.jk-track-active {
+  border-color: #ff44bb !important;
+  background: rgba(255, 68, 187, 0.10) !important;
+  box-shadow: inset 0 0 18px rgba(255, 68, 187, 0.08);
+}
+
+.jk-track-num {
+  font-size: 20px;
+  opacity: 0.28;
+  min-width: 28px;
+  letter-spacing: 0;
+}
+
+.jk-track-info {
+  flex: 1;
+}
+
+.jk-track-name {
+  font-size: 15px;
+  font-weight: bold;
+  letter-spacing: 1.5px;
+  text-shadow: 0 0 8px currentColor;
+}
+
+.jk-track-artist {
+  font-size: 11px;
+  opacity: 0.52;
+  margin-top: 2px;
+  letter-spacing: 0.5px;
+}
+
+.jk-track-desc {
+  font-size: 10px;
+  opacity: 0.36;
+  margin-top: 3px;
+  letter-spacing: 0.3px;
+}
+
+.jk-track-action {
+  font-size: 12px;
+  opacity: 0.42;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+.jk-track-active .jk-track-action {
+  color: #ff44bb;
+  opacity: 1;
+  text-shadow: 0 0 8px rgba(255, 68, 187, 0.8);
+}
+
+.jk-now-playing {
+  position: absolute;
+  top: 7px;
+  right: 12px;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: #ff44bb;
+  text-shadow: 0 0 8px rgba(255, 68, 187, 0.9);
+  animation: jk-blink 1.1s step-end infinite;
+}
+
+@keyframes jk-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* ── Visualizer panel ────────────────────────────────────────────────────── */
+
+.jk-visualizer {
+  width: 220px;
+  border-left: 1px solid rgba(255, 68, 187, 0.22);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 16px;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.jk-vis-title {
+  font-size: 10px;
+  letter-spacing: 2.5px;
+  opacity: 0.50;
+}
+
+.jk-vis-canvas {
+  width: 180px;
+  height: 180px;
+  border: 1px solid rgba(255, 68, 187, 0.22);
+  display: block;
+}
+
+.jk-vis-label {
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 1.5px;
+  text-align: center;
+  text-shadow: 0 0 10px currentColor;
+}
+
+.jk-vis-sublabel {
+  font-size: 9px;
+  opacity: 0.42;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+/* ── Status bar ──────────────────────────────────────────────────────────── */
+
+.jk-status-bar {
+  padding: 6px 18px;
+  border-top: 1px solid rgba(255, 68, 187, 0.20);
+  font-size: 9px;
+  opacity: 0.38;
+  letter-spacing: 1.2px;
+  flex-shrink: 0;
+}

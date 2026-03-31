@@ -14,6 +14,7 @@ import { showDesktop, hideDesktop }            from '../pc/desktop.js';
 import { showTV, hideTV }                      from '../tv/tv-channels.js';
 import { showArcade, hideArcade }              from '../arcade/arcade-ui.js';
 import { showPhoneUI, hidePhoneUI }            from '../phonebooth/phone-ui.js';
+import { showJukeboxUI, hideJukeboxUI }        from '../jukebox/jukebox-ui.js';
 import { sfx, duckMusic, unduckMusic }         from '../audio/audio-manager.js';
 
 const { gsap } = window;
@@ -59,17 +60,18 @@ export function zoomIn(group) {
   const isTelevision  = !!group.userData.isTelevision;
   const isArcade      = !!group.userData.isArcade;
   const isPhoneBooth  = !!group.userData.isPhoneBooth;
+  const isJukebox     = !!group.userData.isJukebox;
   const worldPos      = new THREE.Vector3();
   // For the computer, TV, arcade, and phone booth, target the screen mesh so
   // the camera centres on the display rather than the group's geometric midpoint.
-  if ((isComputer || isTelevision || isArcade || isPhoneBooth) && group.userData.screenMesh) {
+  if ((isComputer || isTelevision || isArcade || isPhoneBooth || isJukebox) && group.userData.screenMesh) {
     group.userData.screenMesh.getWorldPosition(worldPos);
   } else {
     group.getWorldPosition(worldPos);
   }
   const fwd       = new THREE.Vector3(0, 0, 1).applyQuaternion(group.quaternion);
   // Zoom distances tuned so each device fills the viewport comfortably.
-  const zoomDist  = isArcade ? 2.8 : isComputer ? 2.2 : isTelevision ? 2.5 : isPhoneBooth ? 2.4 : 3.6;
+  const zoomDist  = isArcade ? 2.8 : isComputer ? 2.2 : isTelevision ? 2.5 : isPhoneBooth ? 2.4 : isJukebox ? 2.6 : 3.6;
   const camTarget = worldPos.clone().addScaledVector(fwd, zoomDist);
 
   const tl = gsap.timeline({
@@ -91,6 +93,10 @@ export function zoomIn(group) {
         _currentZoomType = 'phonebooth';
         duckMusic();
         showPhoneUI(() => zoomOut());
+      } else if (isJukebox) {
+        _currentZoomType = 'jukebox';
+        // Don't duck music — the jukebox IS the music UI
+        showJukeboxUI(() => zoomOut());
       } else {
         _currentZoomType = 'project';
         showOverlay(group.userData.proj);
@@ -151,6 +157,8 @@ export function zoomOut() {
     hideArcade(_doZoomOut);
   } else if (_currentZoomType === 'phonebooth') {
     hidePhoneUI(_doZoomOut);
+  } else if (_currentZoomType === 'jukebox') {
+    hideJukeboxUI(_doZoomOut);
   } else {
     if (_currentZoomType === 'celestial') hideLore(); else hideOverlay();
     _doZoomOut();

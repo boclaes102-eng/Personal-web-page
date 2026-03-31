@@ -176,6 +176,42 @@ export async function updatePassword(recoveryToken, newPassword) {
 export function getCurrentUser()  { return _session?.user  ?? null; }
 export function getAccessToken()  { return _session?.access_token ?? null; }
 
+// ── Public: music theme preference ───────────────────────────────────────────
+// Uses the user_preferences table (see SQL setup in auth.js header comment).
+// Both functions are fire-and-forget safe — they fail silently.
+
+export async function saveUserTheme(theme) {
+  const token = getAccessToken();
+  const uid   = getCurrentUser()?.id;
+  if (!token || !uid) return;
+  await fetch(`${SUPABASE_URL}/rest/v1/user_preferences`, {
+    method:  'POST',
+    headers: {
+      ..._headers(token),
+      'Content-Type': 'application/json',
+      'Prefer':        'resolution=merge-duplicates',   // upsert on primary key
+    },
+    body: JSON.stringify({ user_id: uid, music_theme: theme }),
+  }).catch(() => {});
+}
+
+export async function loadUserTheme() {
+  const token = getAccessToken();
+  const uid   = getCurrentUser()?.id;
+  if (!token || !uid) return null;
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/user_preferences?user_id=eq.${uid}&select=music_theme`,
+      { headers: _headers(token) }
+    );
+    if (!res.ok) return null;
+    const rows = await res.json();
+    return rows?.[0]?.music_theme ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // ── Public: parse recovery / email-confirm tokens from the URL hash ───────────
 // Supabase appends  #access_token=...&type=recovery  (or type=signup) to the
 // redirect URL after the user clicks a link in their email.

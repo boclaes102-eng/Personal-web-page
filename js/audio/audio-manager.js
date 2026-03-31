@@ -22,6 +22,11 @@ let _ambientActive  = false;
 let _noteTimeout    = null;
 let _pendingAmbient = false;  // true when startAmbient() was called before initAudio()
 
+let _themeOscillators = [];    // all running oscillators for the current ambient theme
+let _themeTimers      = [];    // all setTimeout / setInterval IDs for rhythmic elements
+let _currentTheme     = 'space'; // active theme name
+let _arpIdx           = 0;     // synthwave arpeggio note index
+
 // ── Init (call once on first user gesture) ────────────────────────────────────
 export function initAudio() {
   if (ctx) return;
@@ -101,21 +106,18 @@ export function startAmbient() {
   musicGain.gain.setValueAtTime(0, ctx.currentTime);
   musicGain.gain.linearRampToValueAtTime(0.55, ctx.currentTime + 5);
 
-  _layerDrone();
-  _layerPad();
-  _layerShimmer();
-  _scheduleNote();
+  _startThemeByName(_currentTheme);
 }
 
 // Layer 1 — deep bass drone (A1 = 55 Hz and A2 = 110 Hz)
 function _layerDrone() {
   [55, 110].forEach((freq, idx) => {
-    const osc = ctx.createOscillator();
+    const osc = _trackOsc(ctx.createOscillator());
     osc.type = 'sine';
     osc.frequency.value = freq;
 
     // Slow amplitude tremolo — each voice at a different rate so they breathe independently
-    const lfo = ctx.createOscillator();
+    const lfo = _trackOsc(ctx.createOscillator());
     lfo.frequency.value = 0.055 + idx * 0.028;
     const lfoGain = ctx.createGain();
     lfoGain.gain.value = 0.10;
@@ -139,12 +141,12 @@ function _layerPad() {
   const chord = [220, 261.6, 329.6, 392];
   chord.forEach((baseFreq, i) => {
     [-4, 4].forEach(cents => {
-      const osc = ctx.createOscillator();
+      const osc = _trackOsc(ctx.createOscillator());
       osc.type = 'triangle';
       osc.frequency.value = baseFreq * Math.pow(2, cents / 1200);
 
       // Micro frequency drift for organic evolution
-      const driftLFO = ctx.createOscillator();
+      const driftLFO = _trackOsc(ctx.createOscillator());
       driftLFO.frequency.value = 0.018 + i * 0.009;
       const driftG = ctx.createGain();
       driftG.gain.value = baseFreq * 0.0018;
@@ -172,11 +174,11 @@ function _layerPad() {
 // Layer 3 — high shimmer (upper harmonics, very quiet, slowly pulsing)
 function _layerShimmer() {
   [880, 1320].forEach((freq, i) => {
-    const osc = ctx.createOscillator();
+    const osc = _trackOsc(ctx.createOscillator());
     osc.type = 'sine';
     osc.frequency.value = freq;
 
-    const lfo = ctx.createOscillator();
+    const lfo = _trackOsc(ctx.createOscillator());
     lfo.frequency.value = 0.042 + i * 0.033;
     const lfoG = ctx.createGain();
     lfoG.gain.value = 0.022;
@@ -224,7 +226,7 @@ function _scheduleNote() {
   osc.stop(now + dur + 0.1);
 
   // Recurse after 4–12 s
-  _noteTimeout = setTimeout(_scheduleNote, (4 + Math.random() * 8) * 1000);
+  _noteTimeout = _trackTimer(setTimeout(_scheduleNote, (4 + Math.random() * 8) * 1000));
 }
 
 // ── Music ducking ─────────────────────────────────────────────────────────────
@@ -235,7 +237,7 @@ export function stopAmbient() {
   musicGain.gain.setValueAtTime(musicGain.gain.value, ctx.currentTime);
   musicGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 2.0);
   _ambientActive = false;
-  if (_noteTimeout) { clearTimeout(_noteTimeout); _noteTimeout = null; }
+  _stopTheme();
 }
 
 export function duckMusic() {
@@ -257,6 +259,21 @@ function _canPlay(name, minGapMs) {
   if (_lastPlayed[name] && now - _lastPlayed[name] < minGapMs) return false;
   _lastPlayed[name] = now;
   return true;
+}
+
+// ── Theme-layer tracking helpers ──────────────────────────────────────────────
+// Every long-running oscillator created for an ambient theme is registered here
+// so it can be stopped cleanly when switching themes.
+function _trackOsc(osc)  { _themeOscillators.push(osc); return osc; }
+function _trackTimer(id) { _themeTimers.push(id);        return id;  }
+
+function _stopTheme() {
+  const t = ctx ? ctx.currentTime + 0.05 : 0;
+  _themeOscillators.forEach(o => { try { o.stop(t); } catch {} });
+  _themeOscillators = [];
+  _themeTimers.forEach(id => { clearTimeout(id); clearInterval(id); });
+  _themeTimers = [];
+  if (_noteTimeout) { clearTimeout(_noteTimeout); _noteTimeout = null; }
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -559,6 +576,258 @@ function _breakoutLevelClear() {
     osc.connect(g); g.connect(sfxGain); osc.start(st); osc.stop(st + 0.130);
   });
 }
+
+// ── Theme dispatcher ─────────────────────────────────────────────────────────
+function _startThemeByName(name) {
+  if      (name === 'synthwave') { _layerSynthBass(); _layerSynthPad(); _scheduleSynthArp(); }
+  else if (name === 'jazz')      { _layerJazzBass();  _layerJazzPad();  _scheduleJazzNote(); }
+  else if (name === 'cyberpunk') { _layerCyberSub();  _layerCyberDrone(); _scheduleCyberPulse(); }
+  else                           { _layerDrone(); _layerPad(); _layerShimmer(); _scheduleNote(); }
+}
+
+// ── Synthwave theme ───────────────────────────────────────────────────────────
+// Pulsing filtered bass + detuned sawtooth pad + ascending D-minor arpeggio
+function _layerSynthBass() {
+  const osc = _trackOsc(ctx.createOscillator());
+  osc.type = 'sawtooth';
+  osc.frequency.value = 65.4;          // C2 — punchy analog bass root
+
+  const filt = ctx.createBiquadFilter();
+  filt.type = 'lowpass'; filt.frequency.value = 280; filt.Q.value = 8;  // resonant Moog character
+
+  const lfo = _trackOsc(ctx.createOscillator());
+  lfo.frequency.value = 0.45;
+  const lfoG = ctx.createGain(); lfoG.gain.value = 200;
+  lfo.connect(lfoG); lfoG.connect(filt.frequency);
+
+  const g = ctx.createGain(); g.gain.value = 0.28;
+  osc.connect(filt); filt.connect(g); g.connect(musicGain);
+  lfo.start(); osc.start();
+}
+
+function _layerSynthPad() {
+  const chord = [220, 261.6, 329.6, 440];   // A3 C4 E4 A4 — A minor
+  chord.forEach(base => {
+    [-10, 10].forEach(cents => {
+      const osc = _trackOsc(ctx.createOscillator());
+      osc.type = 'sawtooth';
+      osc.frequency.value = base * Math.pow(2, cents / 1200);
+
+      const filt = ctx.createBiquadFilter();
+      filt.type = 'lowpass'; filt.frequency.value = 900; filt.Q.value = 1.2;
+
+      const g = ctx.createGain(); g.gain.value = 0.020;
+      osc.connect(filt); filt.connect(g); g.connect(_musicReverb);
+      osc.start();
+    });
+  });
+}
+
+// D-minor ascending: D4 F4 G4 A4 C5 D5 F5 G5
+const _SYNTH_ARP = [293.7, 349.2, 392, 440, 523.3, 587.3, 698.5, 783.9];
+function _scheduleSynthArp() {
+  if (!_ambientActive || !ctx || _currentTheme !== 'synthwave') return;
+  const freq = _SYNTH_ARP[_arpIdx++ % _SYNTH_ARP.length];
+  const now  = ctx.currentTime;
+  const osc  = ctx.createOscillator();
+  osc.type = 'square'; osc.frequency.value = freq;
+
+  const filt = ctx.createBiquadFilter();
+  filt.type = 'lowpass'; filt.frequency.value = 2400;
+
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0, now);
+  g.gain.linearRampToValueAtTime(0.048, now + 0.008);
+  g.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+
+  osc.connect(filt); filt.connect(g); g.connect(musicGain);
+  osc.start(now); osc.stop(now + 0.24);
+
+  // ~130 BPM 8th note with slight humanise
+  _trackTimer(setTimeout(_scheduleSynthArp, (228 + (Math.random() - 0.5) * 20)));
+}
+
+// ── Jazz Lounge theme ─────────────────────────────────────────────────────────
+// Slow walking bass + Bb major-7 pad through reverb + sparse melody
+const _JAZZ_BASS_NOTES = [116.5, 130.8, 146.8, 155.6, 174.6, 196, 207.7, 233.1, 261.6];
+
+function _layerJazzBass() {
+  function _walk() {
+    if (!_ambientActive || !ctx || _currentTheme !== 'jazz') return;
+    const freq = _JAZZ_BASS_NOTES[Math.floor(Math.random() * _JAZZ_BASS_NOTES.length)];
+    const now  = ctx.currentTime;
+    const dur  = 0.55 + Math.random() * 0.50;
+
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = freq * (1 + (Math.random() - 0.5) * 0.006); // slight detune for upright feel
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(0.30, now + 0.04);
+    g.gain.setValueAtTime(0.30, now + dur - 0.12);
+    g.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+    osc.connect(g); g.connect(musicGain);
+    osc.start(now); osc.stop(now + dur + 0.02);
+    _trackTimer(setTimeout(_walk, (dur - 0.06) * 1000));
+  }
+  _walk();
+}
+
+function _layerJazzPad() {
+  // Bb major-7 voicing: Bb2 D3 F3 A3 D4 — soft triangles through reverb
+  [116.5, 146.8, 174.6, 220, 293.7].forEach((base, i) => {
+    const osc = _trackOsc(ctx.createOscillator());
+    osc.type = 'triangle'; osc.frequency.value = base;
+
+    const driftLFO = _trackOsc(ctx.createOscillator());
+    driftLFO.frequency.value = 0.015 + i * 0.006;
+    const dG = ctx.createGain(); dG.gain.value = base * 0.002;
+    driftLFO.connect(dG); dG.connect(osc.frequency);
+
+    const filt = ctx.createBiquadFilter();
+    filt.type = 'lowpass'; filt.frequency.value = 1100;
+
+    const g = ctx.createGain(); g.gain.value = 0.038;
+    osc.connect(filt); filt.connect(g); g.connect(_musicReverb);
+    driftLFO.start(); osc.start();
+  });
+}
+
+// Bb major pentatonic melody: Bb D Eb F Ab across two octaves
+const _JAZZ_MELODY = [116.5, 146.8, 155.6, 174.6, 207.7, 233.1, 293.7, 311.1, 349.2, 415.3, 466.2];
+function _scheduleJazzNote() {
+  if (!_ambientActive || !ctx || _currentTheme !== 'jazz') return;
+  const freq = _JAZZ_MELODY[Math.floor(Math.random() * _JAZZ_MELODY.length)];
+  const vol  = 0.028 + Math.random() * 0.030;
+  const dur  = 1.0 + Math.random() * 2.5;
+  const now  = ctx.currentTime;
+
+  const osc = ctx.createOscillator();
+  osc.type = 'sine'; osc.frequency.value = freq;
+
+  const vib = ctx.createOscillator(); vib.frequency.value = 5.2;
+  const vibG = ctx.createGain(); vibG.gain.value = freq * 0.004;
+  vib.connect(vibG); vibG.connect(osc.frequency);
+
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0, now);
+  g.gain.linearRampToValueAtTime(vol, now + 0.18);
+  g.gain.setValueAtTime(vol, now + dur - 0.45);
+  g.gain.linearRampToValueAtTime(0, now + dur);
+
+  osc.connect(g); g.connect(_musicReverb);
+  vib.start(now); osc.start(now);
+  vib.stop(now + dur + 0.1); osc.stop(now + dur + 0.1);
+
+  _trackTimer(setTimeout(_scheduleJazzNote, (1500 + Math.random() * 4000)));
+}
+
+// ── Cyberpunk theme ───────────────────────────────────────────────────────────
+// Heavy E1 sub + dark Bm drone + irregular industrial noise stabs
+function _layerCyberSub() {
+  const osc = _trackOsc(ctx.createOscillator());
+  osc.type = 'sine'; osc.frequency.value = 41.2;  // E1
+
+  const lfo = _trackOsc(ctx.createOscillator());
+  lfo.frequency.value = 0.06;
+  const lfoG = ctx.createGain(); lfoG.gain.value = 12;
+  lfo.connect(lfoG); lfoG.connect(osc.frequency);
+
+  const g = ctx.createGain(); g.gain.value = 0.44;
+  osc.connect(g); g.connect(musicGain);
+  lfo.start(); osc.start();
+}
+
+function _layerCyberDrone() {
+  // Bm: B2(123.5) D3(146.8) F#3(185) — sawtooth through resonant bandpass
+  [123.5, 146.8, 185].forEach((base, i) => {
+    const osc = _trackOsc(ctx.createOscillator());
+    osc.type = 'sawtooth';
+    osc.frequency.value = base * (1 + (Math.random() - 0.5) * 0.012);
+
+    const filt = ctx.createBiquadFilter();
+    filt.type = 'bandpass'; filt.frequency.value = 500 + i * 200; filt.Q.value = 3.5;
+
+    const g = ctx.createGain(); g.gain.value = 0.050;
+    osc.connect(filt); filt.connect(g); g.connect(_musicReverb);
+    osc.start();
+  });
+
+  // Dissonant high shimmer: tritone B4(493.9) F5(698.5)
+  [493.9, 698.5].forEach((freq, i) => {
+    const osc = _trackOsc(ctx.createOscillator());
+    osc.type = 'sine'; osc.frequency.value = freq;
+
+    const lfo = _trackOsc(ctx.createOscillator());
+    lfo.frequency.value = 0.14 + i * 0.07;
+    const lfoG = ctx.createGain(); lfoG.gain.value = 0.016;
+    lfo.connect(lfoG);
+
+    const g = ctx.createGain(); g.gain.value = 0.016;
+    lfoG.connect(g.gain);
+    osc.connect(g); g.connect(_musicReverb);
+    lfo.start(); osc.start();
+  });
+}
+
+function _scheduleCyberPulse() {
+  if (!_ambientActive || !ctx || _currentTheme !== 'cyberpunk') return;
+  const now = ctx.currentTime;
+
+  // Industrial noise stab
+  const src = ctx.createBufferSource();
+  src.buffer = _noise(0.09);
+  const filt = ctx.createBiquadFilter();
+  filt.type = 'bandpass'; filt.frequency.value = 700 + Math.random() * 800; filt.Q.value = 5;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.14, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+  src.connect(filt); filt.connect(g); g.connect(musicGain); src.start(now);
+
+  // Occasional tritone synth stab
+  if (Math.random() > 0.55) {
+    const stab = ctx.createOscillator();
+    stab.type = 'sawtooth';
+    stab.frequency.value = 220 * (Math.random() > 0.5 ? 1.0 : 1.414);  // root or tritone
+    const sf = ctx.createBiquadFilter();
+    sf.type = 'lowpass'; sf.frequency.value = 1400; sf.Q.value = 2;
+    const sg = ctx.createGain();
+    sg.gain.setValueAtTime(0.09, now); sg.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+    stab.connect(sf); sf.connect(sg); sg.connect(musicGain);
+    stab.start(now); stab.stop(now + 0.15);
+  }
+
+  _trackTimer(setTimeout(_scheduleCyberPulse, 480 + Math.random() * 720));
+}
+
+// ── Theme public API ──────────────────────────────────────────────────────────
+
+/** Pre-select a theme before startAmbient() is called (e.g. on page load from saved pref). */
+export function setInitialTheme(name) {
+  if (name) _currentTheme = name;
+}
+
+/** Crossfade to a new theme while ambient is playing. */
+export function setMusicTheme(name) {
+  if (!ctx || !musicGain) return;
+  if (name === _currentTheme) return;
+  _currentTheme = name;
+  _arpIdx = 0;
+
+  musicGain.gain.cancelScheduledValues(ctx.currentTime);
+  musicGain.gain.setTargetAtTime(0, ctx.currentTime, 0.22);
+
+  _trackTimer(setTimeout(() => {
+    _stopTheme();
+    if (!_ambientActive) return;
+    musicGain.gain.cancelScheduledValues(ctx.currentTime);
+    musicGain.gain.linearRampToValueAtTime(0.55, ctx.currentTime + 2.0);
+    _startThemeByName(name);
+  }, 700));
+}
+
+export function getMusicTheme() { return _currentTheme; }
 
 // ── Phone booth SFX ──────────────────────────────────────────────────────────
 
