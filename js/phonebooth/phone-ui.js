@@ -323,26 +323,72 @@ const US_AREA_CODES = {
 // ── Spam / scam patterns ──────────────────────────────────────────────────────
 
 const SCAM_AREA_CODES = new Set([
-  '809','876','268','473','664','649','767','784','246','869','758','784',
-  '900','976','550','540', // premium rate / one-ring
+  // Caribbean one-ring / toll-fraud (NANP +1) — look like US numbers but are not
+  '809','876','268','473','664','649','767','784','246','869','758',
+  '242','284','345','441','340',
+  // US premium / pay-per-call
+  '900','976','550',
 ]);
 
+// country dial code → { label, detail }
 const SCAM_COUNTRY_CODES = {
-  '234': 'Nigeria — frequently used in advance-fee (419) fraud.',
-  '353': 'Ireland — occasionally spoofed in European scam calls.',
-  '233': 'Ghana — used in romance scams and wire-transfer fraud.',
-  '255': 'Tanzania — linked to one-ring callback schemes.',
-  '252': 'Somalia — high-risk origin for international toll fraud.',
+  '234': { label: 'Nigeria',                    detail: 'Frequently used in advance-fee (419) fraud, romance scams, and wire-transfer fraud.' },
+  '233': { label: 'Ghana',                      detail: 'Used in romance scams, lottery fraud, and wire-transfer schemes.' },
+  '255': { label: 'Tanzania',                   detail: 'Linked to one-ring (Wangiri) callback schemes.' },
+  '252': { label: 'Somalia',                    detail: 'High-risk origin for international toll fraud.' },
+  '235': { label: 'Chad',                       detail: 'Frequently used in Wangiri one-ring scam campaigns — very high termination rate.' },
+  '236': { label: 'Central African Republic',   detail: 'High-rate destination used in Wangiri scams.' },
+  '241': { label: 'Gabon',                      detail: 'Used in international toll-fraud callback schemes.' },
+  '242': { label: 'Republic of Congo',          detail: 'High-rate destination used in Wangiri scams.' },
+  '243': { label: 'DR Congo',                   detail: 'Wangiri one-ring scam calls frequently originate here.' },
+  '245': { label: 'Guinea-Bissau',              detail: 'Very high call termination cost — used in toll fraud.' },
+  '253': { label: 'Djibouti',                   detail: 'Used in Wangiri callback scam campaigns.' },
+  '291': { label: 'Eritrea',                    detail: 'High-cost international calls; frequently used in Wangiri scams.' },
+  '355': { label: 'Albania',                    detail: 'Top source of Wangiri one-ring scam calls targeting European mobile numbers.' },
+  '373': { label: 'Moldova',                    detail: 'Very frequently used in Wangiri and premium-rate scams targeting EU numbers.' },
+  '375': { label: 'Belarus',                    detail: 'Used in international toll fraud and unsolicited scam calls.' },
+  '381': { label: 'Serbia',                     detail: 'Some usage in Wangiri schemes targeting Western European numbers.' },
+  '387': { label: 'Bosnia and Herzegovina',     detail: 'Used in toll-fraud callback scams.' },
 };
 
 const KNOWN_SCAM_PREFIXES = [
-  { prefix: '+1809', label: 'Caribbean toll-fraud zone', detail: 'Calling back triggers expensive international charges.' },
-  { prefix: '+1876', label: 'Jamaica one-ring scam',    detail: 'Callers are billed international rates when they call back.' },
-  { prefix: '+1268', label: 'Antigua scam prefix',      detail: 'Part of the Caribbean toll-fraud ring.' },
-  { prefix: '+1649', label: 'Turks & Caicos scam code', detail: 'One-ring scam — do not call back.' },
-  { prefix: '+1473', label: 'Grenada scam prefix',      detail: 'Caribbean toll-fraud; callers charged premium rates.' },
-  { prefix: '+900',  label: 'Premium-rate (US)',         detail: 'Calls billed at premium per-minute rates.' },
-  { prefix: '+976',  label: 'Premium-rate pay-per-call', detail: 'US pay-per-call service; charges apply.' },
+  // NANP Caribbean toll-fraud (longest prefixes first)
+  { prefix: '+1809', label: 'Caribbean toll-fraud (Dominican Republic)', detail: 'Calling back triggers expensive international charges disguised as a US local call.' },
+  { prefix: '+1876', label: 'Jamaica — one-ring scam',                   detail: 'Callers billed international rates when they call back a missed call.' },
+  { prefix: '+1268', label: 'Antigua & Barbuda — toll-fraud',            detail: 'Part of the Caribbean toll-fraud ring.' },
+  { prefix: '+1649', label: 'Turks & Caicos — one-ring scam',            detail: 'Do not call back unknown missed calls from this code.' },
+  { prefix: '+1473', label: 'Grenada — toll-fraud',                      detail: 'Caribbean toll-fraud; callers charged premium international rates.' },
+  { prefix: '+1664', label: 'Montserrat — toll-fraud',                   detail: 'One-ring scam — high international call rate.' },
+  { prefix: '+1767', label: 'Dominica — toll-fraud',                     detail: 'Caribbean one-ring scam zone.' },
+  { prefix: '+1784', label: 'St. Vincent — toll-fraud',                  detail: 'One-ring scam; calls billed at full international rates.' },
+  { prefix: '+1869', label: 'St. Kitts & Nevis — toll-fraud',            detail: 'Do not call back unknown missed calls.' },
+  { prefix: '+1758', label: 'St. Lucia — toll-fraud',                    detail: 'Caribbean one-ring toll-fraud.' },
+  { prefix: '+1242', label: 'Bahamas — potential toll-fraud',            detail: 'Used in some one-ring scam campaigns.' },
+  { prefix: '+1284', label: 'British Virgin Islands — some fraud',       detail: 'Occasionally used in toll-fraud schemes.' },
+  { prefix: '+1345', label: 'Cayman Islands — financial fraud risk',     detail: 'Some usage in financial and toll-fraud scams.' },
+  { prefix: '+1441', label: 'Bermuda — toll-fraud activity',             detail: 'Occasionally used in toll-fraud schemes.' },
+  // US premium rate
+  { prefix: '+1900', label: 'US Premium-rate number',                    detail: 'Calls billed at elevated per-minute rates. Frequently used in phone scams.' },
+  { prefix: '+1976', label: 'US Pay-per-call number',                    detail: 'Premium-rate service; charges apply per call.' },
+  // UK special / premium rate
+  { prefix: '+44070', label: 'UK personal redirect number',              detail: 'Calls re-routed at above-standard rates; used in scam callback schemes.' },
+  { prefix: '+44076', label: 'UK personal number',                       detail: 'High-rate redirect — verify before calling back.' },
+  { prefix: '+44084', label: 'UK special-rate number',                   detail: 'Charged above standard rate. Frequently used in scam callback lines.' },
+  { prefix: '+44087', label: 'UK special-rate number',                   detail: 'Premium-rate calls. Used in scam callback schemes.' },
+  { prefix: '+44090', label: 'UK premium-rate number',                   detail: 'Very high per-minute charges. Commonly used in phone scams.' },
+  { prefix: '+44091', label: 'UK premium-rate number',                   detail: 'High call charges. Be cautious of unknown missed calls.' },
+  { prefix: '+44098', label: 'UK adult/premium line',                    detail: 'Premium-rate number with high per-minute charges.' },
+  // Belgian premium rate
+  { prefix: '+320900', label: 'Belgian premium-rate number (0900)',      detail: 'Calls billed at premium rates — verify the caller before dialling back.' },
+  // EU Wangiri origins
+  { prefix: '+355', label: 'Albania — Wangiri scam origin',              detail: 'Most common Wangiri source in Europe. One missed call, you call back, expensive premium rates apply.' },
+  { prefix: '+373', label: 'Moldova — Wangiri / toll-fraud',             detail: 'High-frequency source of one-ring scam calls inside the EU.' },
+  { prefix: '+375', label: 'Belarus — international toll fraud',         detail: 'Used in international toll-fraud and scam call campaigns.' },
+  { prefix: '+235', label: 'Chad — Wangiri scam',                        detail: 'High termination cost — calling back triggers expensive international charges.' },
+  { prefix: '+236', label: 'Central African Republic — Wangiri',        detail: 'One-ring scam origin; very high international call rates.' },
+  { prefix: '+241', label: 'Gabon — toll-fraud',                        detail: 'Used in international callback toll-fraud schemes.' },
+  { prefix: '+253', label: 'Djibouti — Wangiri',                        detail: 'Do not call back unknown missed calls from this prefix.' },
+  { prefix: '+291', label: 'Eritrea — Wangiri',                         detail: 'Highest call termination cost in Africa; frequently used in one-ring scams.' },
 ];
 
 // ── Major breaches that exposed phone numbers ─────────────────────────────────
@@ -410,6 +456,131 @@ const PHONE_BREACHES = [
   },
 ];
 
+// ── European area code → city mapping ────────────────────────────────────────
+
+const EU_AREA_CODES = {
+  '32': { // Belgium — up to 2-digit area code after +32
+    '2':'Brussels (Bruxelles / Brussel)', '3':'Antwerp (Antwerpen)', '4':'Liège',
+    '9':'Ghent (Gent)', '10':'Brabant Wallon (Wavre)', '11':'Hasselt',
+    '12':'Tongeren', '13':'Diest', '14':'Turnhout', '15':'Mechelen',
+    '16':'Leuven', '19':'Waremme', '50':'Bruges (Brugge)', '51':'Roeselare',
+    '52':'Dendermonde', '53':'Aalst', '54':'Ninove', '55':'Ronse',
+    '56':'Kortrijk', '57':'Ypres (Ieper)', '58':'Veurne', '59':'Ostend (Oostende)',
+    '60':'Chimay', '61':'Neufchâteau', '63':'Arlon', '64':'La Louvière',
+    '65':'Mons (Bergen)', '67':'Nivelles (Nijvel)', '68':'Ath (Aat)',
+    '69':'Tournai (Doornik)', '71':'Charleroi', '80':'Stavelot',
+    '81':'Namur (Namen)', '82':'Dinant', '83':'Ciney', '84':'Marche-en-Famenne',
+    '85':'Huy (Hoei)', '86':'Durbuy', '87':'Verviers', '89':'Genk',
+  },
+  '31': { // Netherlands
+    '10':'Rotterdam', '13':'Tilburg', '15':'Delft', '20':'Amsterdam',
+    '23':'Haarlem', '24':'Nijmegen', '26':'Arnhem', '30':'Utrecht',
+    '33':'Amersfoort', '35':'Hilversum', '36':'Almere', '38':'Zwolle',
+    '40':'Eindhoven', '43':'Maastricht', '45':'Heerlen', '46':'Sittard-Geleen',
+    '50':'Groningen', '53':'Enschede', '55':'Apeldoorn', '58':'Leeuwarden',
+    '70':"The Hague (Den Haag)", '71':'Leiden', '72':'Alkmaar',
+    '73':"Den Bosch ('s-Hertogenbosch)", '74':'Almelo', '75':'Zaandam',
+    '76':'Breda', '77':'Venlo', '78':'Dordrecht', '79':'Zoetermeer',
+  },
+  '44': { // United Kingdom — digits after +44, no leading 0
+    '20':'London', '23':'Southampton / Portsmouth', '24':'Coventry',
+    '28':'Northern Ireland', '29':'Cardiff, Wales',
+    '113':'Leeds', '114':'Sheffield', '115':'Nottingham', '116':'Leicester',
+    '117':'Bristol', '118':'Reading', '121':'Birmingham', '131':'Edinburgh',
+    '141':'Glasgow', '151':'Liverpool', '161':'Manchester', '191':'Newcastle / Tyne and Wear',
+  },
+  '49': { // Germany
+    '30':'Berlin', '40':'Hamburg', '69':'Frankfurt am Main', '89':'Munich (München)',
+    '201':'Essen', '211':'Düsseldorf', '221':'Cologne (Köln)', '231':'Dortmund',
+    '241':'Aachen', '341':'Leipzig', '351':'Dresden', '381':'Rostock',
+    '391':'Magdeburg', '411':'Kiel', '421':'Bremen', '511':'Hannover',
+    '521':'Bielefeld', '621':'Mannheim', '711':'Stuttgart', '911':'Nuremberg (Nürnberg)',
+  },
+  '33': { // France — first digit of national number maps to region
+    '1':'Paris (Île-de-France)', '2':'Northwest France',
+    '3':'Northeast France', '4':'Southeast France / Corsica', '5':'Southwest France',
+  },
+  '34': { // Spain
+    '91':'Madrid', '93':'Barcelona', '96':'Valencia', '95':'Seville / Málaga',
+    '94':'Bilbao', '98':'Asturias / Galicia', '97':'Lleida / Girona',
+    '92':'Valladolid / Salamanca',
+  },
+};
+
+// Returns the city/region for a European landline, or null.
+function lookupEuArea(dialCode, subscriber) {
+  const codes = EU_AREA_CODES[dialCode];
+  if (!codes) return null;
+  // Try longest prefix first (up to 4 digits)
+  for (const len of [4, 3, 2, 1]) {
+    const hit = codes[subscriber.slice(0, len)];
+    if (hit) return hit;
+  }
+  return null;
+}
+
+// ── European mobile / landline / premium detection ────────────────────────────
+// Returns 'mobile' | 'landline' | 'toll-free' | 'premium' | null
+function detectLineType(dialCode, sub) {
+  const s = sub || '';
+  switch (dialCode) {
+    case '32': // Belgium
+      // International format: +32 4XX xxxxxx → subscriber is 9 digits starting with 4 (mobile)
+      // Liège landline:        +32 4 xxxxxxx  → subscriber is 8 digits starting with 4
+      if (s.startsWith('4') && s.length === 9) return 'mobile';
+      if (s.startsWith('04')) return 'mobile';   // domestic format fallback
+      if (s.startsWith('0800')) return 'toll-free';
+      if (s.startsWith('0900') || s.startsWith('090')) return 'premium';
+      return 'landline';
+    case '31': // Netherlands
+      if (s.startsWith('06')) return 'mobile';
+      if (s.startsWith('0800')) return 'toll-free';
+      if (s.startsWith('0900') || s.startsWith('090')) return 'premium';
+      return 'landline';
+    case '44': // United Kingdom
+      if (s.startsWith('7') && !s.startsWith('70') && !s.startsWith('76')) return 'mobile';
+      if (s.startsWith('80') || s.startsWith('500')) return 'toll-free';
+      if (s.startsWith('84') || s.startsWith('87') || s.startsWith('9') || s.startsWith('70') || s.startsWith('76')) return 'premium';
+      return 'landline';
+    case '49': // Germany
+      if (s.startsWith('15') || s.startsWith('16') || s.startsWith('17')) return 'mobile';
+      if (s.startsWith('800')) return 'toll-free';
+      if (s.startsWith('900') || s.startsWith('180')) return 'premium';
+      return 'landline';
+    case '33': // France
+      if (s.startsWith('6') || s.startsWith('7')) return 'mobile';
+      if (s.startsWith('800') || s.startsWith('805')) return 'toll-free';
+      if (s.startsWith('8')) return 'premium';
+      return 'landline';
+    case '34': // Spain
+      if (s.startsWith('6') || s.startsWith('7')) return 'mobile';
+      if (s.startsWith('800') || s.startsWith('900')) return 'toll-free';
+      return 'landline';
+    case '39': // Italy
+      if (s.startsWith('3')) return 'mobile';
+      if (s.startsWith('800')) return 'toll-free';
+      if (s.startsWith('899')) return 'premium';
+      return 'landline';
+    case '46': // Sweden
+      if (s.startsWith('7')) return 'mobile';
+      return 'landline';
+    case '47': // Norway
+      if (s.startsWith('4') || s.startsWith('9')) return 'mobile';
+      return 'landline';
+    case '41': // Switzerland
+      if (s.startsWith('7')) return 'mobile';
+      if (s.startsWith('800')) return 'toll-free';
+      return 'landline';
+    case '353': // Ireland
+      if (s.startsWith('08')) return 'mobile';
+      return 'landline';
+    case '358': // Finland
+      if (s.startsWith('04') || s.startsWith('05')) return 'mobile';
+      return 'landline';
+    default: return null;
+  }
+}
+
 // ── Phone number parser ───────────────────────────────────────────────────────
 
 function parseNumber(raw) {
@@ -466,24 +637,33 @@ function parseNumber(raw) {
     localArea = US_AREA_CODES[areaCode] || null;
   }
 
-  // Detect number type
+  // Detect number type and line type
   let type = 'Geographic / Landline or Mobile';
+  let lineType = null;
+
   if (dialCode === '1') {
     const exchange = subscriber.slice(3, 6);
-    if (areaCode === '800' || areaCode === '888' || areaCode === '877' ||
-        areaCode === '866' || areaCode === '855' || areaCode === '844' ||
-        areaCode === '833' || areaCode === '822') {
-      type = 'Toll-free';
-    } else if (areaCode === '900' || areaCode === '976' || areaCode === '550') {
-      type = 'Premium-rate';
-    } else if (exchange && (exchange.startsWith('555'))) {
-      type = 'Fictitious (555 block)';
+    if (['800','888','877','866','855','844','833','822'].includes(areaCode)) {
+      type = 'Toll-free'; lineType = 'toll-free';
+    } else if (['900','976','550'].includes(areaCode)) {
+      type = 'Premium-rate'; lineType = 'premium';
+    } else if (exchange && exchange.startsWith('555')) {
+      type = 'Fictitious (555 block)'; lineType = 'fictitious';
     } else {
       type = 'NANP — Mobile or Landline';
     }
+  } else {
+    lineType = detectLineType(dialCode, subscriber);
+    if (lineType === 'mobile')    type = 'Mobile';
+    else if (lineType === 'landline')  type = 'Landline (Fixed)';
+    else if (lineType === 'toll-free') type = 'Toll-free';
+    else if (lineType === 'premium')   type = 'Premium-rate';
   }
 
-  return { raw: cleaned, digits, dialCode, country, subscriber, areaCode, localArea, type };
+  // EU city/region from area code — skip for mobile (mobile numbers have no geographic area)
+  const euRegion = (dialCode !== '1' && lineType !== 'mobile') ? lookupEuArea(dialCode, subscriber) : null;
+
+  return { raw: cleaned, digits, dialCode, country, subscriber, areaCode, localArea, type, lineType, euRegion };
 }
 
 function formatNumber(parsed) {
@@ -512,29 +692,50 @@ function spamCheck(parsed) {
     });
   }
 
-  // Known scam prefixes
+  // Known scam prefixes — match longest prefix first to avoid duplicate flags
   const e164 = parsed.dialCode ? `+${parsed.dialCode}${parsed.subscriber}` : `+${parsed.digits}`;
-  KNOWN_SCAM_PREFIXES.forEach(({ prefix, label, detail }) => {
+  const sorted = [...KNOWN_SCAM_PREFIXES].sort((a, b) => b.prefix.length - a.prefix.length);
+  let prefixMatched = false;
+  for (const { prefix, label, detail } of sorted) {
     if (e164.startsWith(prefix)) {
       flags.push({ level: 'WARN', label, detail });
+      prefixMatched = true;
+      break; // most specific match only
     }
-  });
+  }
 
-  // Country-level warnings
-  if (parsed.dialCode && SCAM_COUNTRY_CODES[parsed.dialCode]) {
-    flags.push({
-      level: 'INFO',
-      label: `Country risk note`,
-      detail: SCAM_COUNTRY_CODES[parsed.dialCode],
-    });
+  // Country-level risk (only if no more specific prefix was already flagged)
+  if (!prefixMatched && parsed.dialCode && SCAM_COUNTRY_CODES[parsed.dialCode]) {
+    const sc = SCAM_COUNTRY_CODES[parsed.dialCode];
+    flags.push({ level: 'WARN', label: `Country risk: ${sc.label}`, detail: sc.detail });
   }
 
   // Premium-rate
-  if (parsed.type === 'Premium-rate') {
+  if (parsed.lineType === 'premium' || parsed.type === 'Premium-rate') {
+    if (!flags.some(f => f.label.toLowerCase().includes('premium') || f.label.toLowerCase().includes('special-rate'))) {
+      flags.push({
+        level: 'WARN',
+        label: 'Premium-rate number',
+        detail: 'Calls to this number are billed at elevated per-minute rates. Frequently used in phone scams.',
+      });
+    }
+  }
+
+  // UK special-rate catch-all (catches patterns not in prefix list)
+  if (parsed.dialCode === '44' && parsed.lineType === 'premium' && !prefixMatched) {
     flags.push({
       level: 'WARN',
-      label: 'Premium-rate number',
-      detail: 'Calls to this number are billed at elevated per-minute rates. Frequently used in phone scams.',
+      label: 'UK special/premium-rate number',
+      detail: '084x, 087x, 09x, and 070x/076x UK numbers are charged above standard rates. Often used in scam callback schemes.',
+    });
+  }
+
+  // Belgian premium rate catch-all
+  if (parsed.dialCode === '32' && parsed.lineType === 'premium' && !prefixMatched) {
+    flags.push({
+      level: 'WARN',
+      label: 'Belgian premium-rate number',
+      detail: 'Belgian 0900 numbers are billed at premium rates — verify before dialling back.',
     });
   }
 
@@ -581,20 +782,22 @@ function renderLookup(content) {
     }
 
     const rows = [
-      ['INPUT',    parsed.raw],
-      ['E.164',    parsed.dialCode ? `+${parsed.dialCode}${parsed.subscriber}` : `+${parsed.digits}`],
-      ['FORMATTED',formatNumber(parsed)],
-      ['DIGITS',   parsed.digits],
+      ['INPUT',     parsed.raw],
+      ['E.164',     parsed.dialCode ? `+${parsed.dialCode}${parsed.subscriber}` : `+${parsed.digits}`],
+      ['FORMATTED', formatNumber(parsed)],
+      ['DIGITS',    parsed.digits],
       ['DIAL CODE', parsed.dialCode ? `+${parsed.dialCode}` : '— Unknown'],
-      ['COUNTRY',  parsed.country ? parsed.country.name : '— Unrecognised dial code'],
-      ['REGION',   parsed.country ? parsed.country.region : '—'],
+      ['COUNTRY',   parsed.country ? parsed.country.name : '— Unrecognised dial code'],
+      ['REGION',    parsed.country ? parsed.country.region : '—'],
     ];
 
     if (parsed.areaCode) {
-      rows.push(['AREA CODE',  parsed.areaCode]);
+      rows.push(['AREA CODE',   parsed.areaCode]);
       rows.push(['CITY / STATE', parsed.localArea || 'Unknown area code']);
     }
-    if (parsed.type) rows.push(['TYPE', parsed.type]);
+    if (parsed.euRegion) {
+      rows.push(['AREA / CITY', parsed.euRegion]);
+    }
 
     rows.forEach(([k, v]) => {
       const r = el('div', 'ph-row');
@@ -603,6 +806,21 @@ function renderLookup(content) {
       r.append(kk, vv);
       out.appendChild(r);
     });
+
+    // LINE TYPE — colour-coded, rendered after basic fields
+    if (parsed.type) {
+      const typeColor = parsed.lineType === 'premium'   ? '#ff4444'
+                      : parsed.lineType === 'mobile'    ? '#aaffaa'
+                      : parsed.lineType === 'landline'  ? '#88ccff'
+                      : parsed.lineType === 'toll-free' ? '#ffdd88'
+                      : null;
+      const r = el('div', 'ph-row');
+      const kk = el('span', 'ph-row-key', 'LINE TYPE :');
+      const vv = el('span', 'ph-row-val', parsed.type);
+      if (typeColor) vv.style.color = typeColor;
+      r.append(kk, vv);
+      out.appendChild(r);
+    }
 
     // Quick spam note
     const flags = spamCheck(parsed);

@@ -8,9 +8,10 @@ import { cam, camDir }        from './core/camera.js';
 import { buildEnvironment, updateEnvironment } from './scene/environment.js';
 import { buildCelestials, updateCelestials }   from './scene/celestials.js';
 import { buildFrames, animateFrames }          from './scene/frames.js';
-import { setupInput }                          from './core/input.js';
-import { initAudio, startAmbient, stopAmbient, setInitialTheme } from './audio/audio-manager.js';
-import { parseHashTokens, checkSession, signOut, loadUserTheme } from './auth/auth.js';
+import { setupInput, applyCelestialMomentum }  from './core/input.js';
+import { initAudio, startAmbient, stopAmbient, setInitialTheme, setCustomTrackUrl, resumeAudio } from './audio/audio-manager.js';
+import { parseHashTokens, checkSession, signOut, loadUserTheme, loadAllCustomTrackUrls } from './auth/auth.js';
+import { initPresence, destroyPresence } from './presence/presence.js';
 import { showAuthOverlay }                     from './auth/auth-ui.js';
 import { sfx }                                 from './audio/audio-manager.js';
 
@@ -26,6 +27,7 @@ function animate(nowMs) {
 
   updateEnvironment(t, dt);
   updateCelestials(t, dt);
+  applyCelestialMomentum();
 
   if (cam.mode !== 'zoomed') {
     animateFrames(t);
@@ -66,6 +68,7 @@ function startWorld(user) {
     gsap.fromTo(curtain,
       { scaleY: 0.005 },
       { scaleY: 1, duration: 0.35, ease: 'power2.in', onComplete: async () => {
+        destroyPresence();
         await signOut();
         // Auth overlay sits above the curtain (z-index 9999) — remove curtain once visible
         showAuthOverlay(newUser => {
@@ -76,6 +79,11 @@ function startWorld(user) {
       }}
     );
   });
+
+  // Start live presence
+  const presenceHud = document.getElementById('presence-hud');
+  if (presenceHud) presenceHud.style.display = '';
+  initPresence(user);
 
   // Build scene
   buildEnvironment();
@@ -100,7 +108,17 @@ function startWorld(user) {
   // AudioContext was already created on the first auth-screen gesture.
   // Load the user's saved music theme before starting ambient so the right
   // theme plays from the first note — no crossfade delay on entry.
-  loadUserTheme().then(theme => {
+  loadUserTheme().then(async theme => {
+    // Custom track requires pre-loading the URL so audio can start immediately on login
+    if (theme === 'custom') {
+      const urls = await loadAllCustomTrackUrls().catch(() => []);
+      const firstUrl = urls.find(u => u) ?? null;
+      if (firstUrl) {
+        setCustomTrackUrl(firstUrl);
+      } else {
+        theme = 'space'; // no uploads yet, fall back to default
+      }
+    }
     if (theme) setInitialTheme(theme);
     startAmbient();
   }).catch(() => startAmbient());
@@ -110,11 +128,15 @@ function startWorld(user) {
 
 // ── Bootstrap: auth check then launch ────────────────────────────────────────
 async function bootstrap() {
-  // Init AudioContext on the very first user gesture anywhere on the page.
-  // The auth screen (button clicks, key presses) satisfies the browser autoplay policy,
-  // so by the time the 3D world loads the context is ready and music can start immediately.
-  window.addEventListener('pointerdown', initAudio, { once: true });
-  window.addEventListener('keydown',     initAudio, { once: true });
+  // Create AudioContext eagerly — for returning users whose browsers have learned
+  // this site plays audio the context may auto-resume with no gesture needed.
+  initAudio();
+
+  // On first gesture: retry resuming a suspended context so music starts without
+  // requiring a second click (handles new visits or post-reload auto-login).
+  function _onFirstGesture() { initAudio(); resumeAudio(); }
+  window.addEventListener('pointerdown', _onFirstGesture, { once: true });
+  window.addEventListener('keydown',     _onFirstGesture, { once: true });
   // 1. Check for Supabase callback tokens in the URL hash
   //    (password recovery or email confirmation links redirect here)
   const hashData = parseHashTokens();

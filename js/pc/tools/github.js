@@ -23,8 +23,15 @@ export function startTool(container) {
     'overflow-y: auto',
     'color: #00ff41',
     'box-sizing: border-box',
+    'white-space: pre-wrap',
+    'user-select: none',
   ].join(';');
   container.appendChild(out);
+
+  // Track mouse hold so typeLine can run faster while held
+  let mouseHeld = false;
+  out.addEventListener('mousedown', () => { mouseHeld = true; });
+  window.addEventListener('mouseup', () => { mouseHeld = false; }, { once: false });
 
   function line(text, color) {
     const d = document.createElement('div');
@@ -36,19 +43,25 @@ export function startTool(container) {
 
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+  // Returns true if the tool container has been removed from the DOM (window closed).
+  function isCancelled() { return !document.body.contains(container); }
+
   async function typeLine(text, color, delay = 13) {
+    if (isCancelled()) return;
     const d = document.createElement('div');
     if (color) d.style.color = color;
     out.appendChild(d);
     for (const ch of text) {
+      if (isCancelled()) return;
       d.textContent += ch;
       sfx('pc-type');
       out.scrollTop = out.scrollHeight;
-      await sleep(delay);
+      await sleep(mouseHeld ? 2 : delay);
     }
   }
 
   async function run() {
+    line('  [ hold left mouse button to fast-forward ]', '#1a3a1a');
     await typeLine('SECUREOS NETWORK BROWSER v1.0');
     await sleep(220);
     await typeLine('');
@@ -67,13 +80,13 @@ export function startTool(container) {
 
     // ASCII octocat
     const art = [
-      '           .---.           ',
-      '          /o   o\\          ',
-      '         |  ---  |         ',
-      '          \\ ___ /          ',
-      '          )  |  (          ',
-      '         /_) | (_\\         ',
-      '           GITHUB           ',
+      '  .---.  ',
+      ' /o   o\\ ',
+      '|  ---  |',
+      ' \\ ___ / ',
+      '  )   (  ',
+      ' /_) (_\\ ',
+      ' GITHUB  ',
     ];
     for (const row of art) {
       line(row, '#ffcc00');
@@ -194,14 +207,15 @@ export function startTool(container) {
 
     no.addEventListener('click', async () => {
       btnRow.remove();
-      sfx('pc-exit');
       line('');
-      await typeLine('  ABORT CONFIRMED.', '#ff4444');
-      await sleep(180);
-      await typeLine('  Disappointing. Truly.', '#555555');
-      await sleep(160);
-      await typeLine('  The greatness will still be there', '#555555');
-      await typeLine('  whenever you find your courage.', '#555555');
+      line('  ABORT CONFIRMED.', '#ff4444');
+      await sleep(350);
+      line('  Disappointing. Truly.', '#555555');
+      await sleep(500);
+      if (!isCancelled()) {
+        // Close the tool window and return to the desktop icon grid
+        container.closest('.pc-window')?.querySelector('.pc-window-back')?.click();
+      }
     });
   }
 

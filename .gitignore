@@ -14,6 +14,9 @@ yarn-error.log*
 .env.local
 .env.*.local
 
+# Supabase credentials — never commit the real file
+js/config.js
+
 # OS
 .DS_Store
 Thumbs.db

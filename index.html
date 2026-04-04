@@ -22,6 +22,8 @@
   <link rel="stylesheet" href="css/auth.css" />
   <link rel="stylesheet" href="css/phone.css" />
   <link rel="stylesheet" href="css/jukebox.css" />
+  <link rel="stylesheet" href="css/presence.css" />
+
 </head>
 <body>
 
@@ -44,6 +46,12 @@
       <span id="header-username"></span>
       <button id="header-signout">SIGN OUT</button>
     </div>
+  </div>
+
+  <!-- ── Presence HUD ──────────────────────────────────────── -->
+  <div id="presence-hud" style="display:none">
+    <div class="pr-counter">● 0 ONLINE</div>
+    <div class="pr-list"></div>
   </div>
 
   <!-- ── Project detail overlay ─────────────────────────── -->
@@ -141,6 +149,9 @@
       </div><!-- /.arc-content -->
     </div><!-- /.arc-inner -->
   </div><!-- /#arcade-overlay -->
+
+  <!-- Supabase JS SDK — needed for Realtime WebSocket presence -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 
   <!-- GSAP — loaded before the module so window.gsap is ready -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>

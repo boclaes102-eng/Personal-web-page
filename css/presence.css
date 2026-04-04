@@ -1,0 +1,75 @@
+/* ── Presence HUD ─────────────────────────────────────────────────────────── */
+
+#presence-hud {
+  position: fixed;
+  bottom: 18px;
+  left: 18px;
+  z-index: 800;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  color: #00ffcc;
+  user-select: none;
+  pointer-events: auto;
+}
+
+/* Pill — always visible */
+.pr-counter {
+  display: inline-block;
+  padding: 4px 10px;
+  border: 1px solid rgba(0, 255, 204, 0.40);
+  background: rgba(0, 0, 0, 0.72);
+  letter-spacing: 1.5px;
+  text-shadow: 0 0 8px rgba(0, 255, 204, 0.8);
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.pr-counter:hover {
+  border-color: rgba(0, 255, 204, 0.80);
+  background: rgba(0, 0, 0, 0.88);
+}
+
+/* Expandable list — hidden until .pr-open is toggled */
+.pr-list {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.25s ease, opacity 0.20s ease;
+}
+
+#presence-hud.pr-open .pr-list {
+  max-height: 300px;
+  opacity: 1;
+}
+
+.pr-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 3px 10px;
+  border: 1px solid rgba(0, 255, 204, 0.14);
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(4px);
+  white-space: nowrap;
+}
+
+.pr-name {
+  opacity: 0.72;
+  letter-spacing: 1px;
+}
+
+.pr-self {
+  opacity: 1;
+  color: #00ffcc;
+  text-shadow: 0 0 6px rgba(0, 255, 204, 0.7);
+}
+
+.pr-room {
+  opacity: 0.42;
+  letter-spacing: 0.8px;
+}

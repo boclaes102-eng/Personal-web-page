@@ -56,9 +56,7 @@
  */
 
 import { getAccessToken, getCurrentUser } from '../auth/auth.js';
-
-const SUPABASE_URL      = 'https://iequlhfuqkqjaxxqsijd.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImllcXVsaGZ1cWtxamF4eHFzaWpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2NDA4ODQsImV4cCI6MjA5MDIxNjg4NH0.4zP_KVcsMzoT3bon8tlC5GUKTRC9i3vohuCTtq-Htx8';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
 
 /** Shared headers — uses the user's auth token when available for RLS */
 function headers() {

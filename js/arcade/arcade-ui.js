@@ -220,10 +220,9 @@ async function _autoSubmitAndShowLeaderboard(gameDef, score) {
   if (username) {
     try {
       await submitScore(username, gameDef.id, score);
-    } catch (err) {
-      console.error('Score submit error:', err);
+    } catch {
       el('arc-lb-body').innerHTML =
-        `<div class="arc-lb-error">SCORE SAVE FAILED<br><small>${err.message}</small></div>`;
+        '<div class="arc-lb-error">SCORE SAVE FAILED<br><small>Please try again later.</small></div>';
       await new Promise(r => setTimeout(r, 2000));
     }
   }
@@ -232,11 +231,9 @@ async function _autoSubmitAndShowLeaderboard(gameDef, score) {
   try {
     const rows = await getLeaderboard(gameDef.id, 10);
     _renderLeaderboard(rows, username, gameDef.color);
-  } catch (err) {
-    console.error('Leaderboard fetch error:', err);
+  } catch {
     el('arc-lb-body').innerHTML =
-      '<div class="arc-lb-error">COULD NOT LOAD SCORES<br>'
-      + '<small>Check your Supabase anon key in db.js</small></div>';
+      '<div class="arc-lb-error">COULD NOT LOAD SCORES<br><small>Please try again later.</small></div>';
   }
 }
 
@@ -268,11 +265,9 @@ async function _showLeaderboard(gameId, playerName) {
   try {
     const rows = await getLeaderboard(gameId, 10);
     _renderLeaderboard(rows, playerName, gameDef?.color ?? '#00ffcc');
-  } catch (err) {
-    console.error('Leaderboard fetch error:', err);
+  } catch {
     el('arc-lb-body').innerHTML =
-      '<div class="arc-lb-error">COULD NOT LOAD SCORES<br>'
-      + '<small>Check your Supabase anon key in db.js</small></div>';
+      '<div class="arc-lb-error">COULD NOT LOAD SCORES<br><small>Please try again later.</small></div>';
   }
 }
 

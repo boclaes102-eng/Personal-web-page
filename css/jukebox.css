@@ -6,7 +6,7 @@
   display: flex;
   flex-direction: column;
   background: #04000c;
-  color: #ff44bb;
+  color: #00ffcc;
   font-family: "Courier New", monospace;
   z-index: 1000;
   overflow: hidden;
@@ -19,7 +19,7 @@
   align-items: center;
   gap: 14px;
   padding: 9px 18px;
-  border-bottom: 1px solid rgba(255, 68, 187, 0.28);
+  border-bottom: 1px solid rgba(0, 255, 204, 0.28);
   flex-shrink: 0;
 }
 
@@ -27,7 +27,7 @@
   font-size: 19px;
   font-weight: bold;
   letter-spacing: 2px;
-  text-shadow: 0 0 14px rgba(255, 68, 187, 0.9);
+  text-shadow: 0 0 14px rgba(0, 255, 204, 0.9);
 }
 
 .jk-logo-sub {
@@ -39,8 +39,8 @@
 .jk-eject-btn {
   margin-left: auto;
   background: transparent;
-  border: 1px solid rgba(255, 68, 187, 0.65);
-  color: #ff44bb;
+  border: 1px solid rgba(0, 255, 204, 0.65);
+  color: #00ffcc;
   font-family: inherit;
   font-size: 12px;
   padding: 5px 14px;
@@ -50,8 +50,14 @@
 }
 
 .jk-eject-btn:hover {
-  background: rgba(255, 68, 187, 0.14);
-  border-color: #ff44bb;
+  background: rgba(0, 255, 204, 0.14);
+  border-color: #00ffcc;
+}
+
+/* Theme-row play/pause button (same size as upload btn but always visible) */
+.jk-theme-pp-btn {
+  min-width: 100px;
+  text-align: center;
 }
 
 /* ── Body layout ─────────────────────────────────────────────────────────── */
@@ -77,23 +83,23 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 14px 16px;
-  border: 1px solid rgba(255, 68, 187, 0.18);
-  background: rgba(255, 68, 187, 0.025);
+  padding: 20px 18px;
+  border: 1px solid rgba(0, 255, 204, 0.18);
+  background: rgba(0, 255, 204, 0.025);
   cursor: pointer;
   position: relative;
   transition: background 0.15s, border-color 0.15s;
 }
 
 .jk-track:hover {
-  background: rgba(255, 68, 187, 0.07);
-  border-color: rgba(255, 68, 187, 0.45);
+  background: rgba(0, 255, 204, 0.07);
+  border-color: rgba(0, 255, 204, 0.45);
 }
 
 .jk-track-active {
-  border-color: #ff44bb !important;
-  background: rgba(255, 68, 187, 0.10) !important;
-  box-shadow: inset 0 0 18px rgba(255, 68, 187, 0.08);
+  border-color: #00ffcc !important;
+  background: rgba(0, 255, 204, 0.10) !important;
+  box-shadow: inset 0 0 18px rgba(0, 255, 204, 0.08);
 }
 
 .jk-track-num {
@@ -136,9 +142,9 @@
 }
 
 .jk-track-active .jk-track-action {
-  color: #ff44bb;
+  color: #00ffcc;
   opacity: 1;
-  text-shadow: 0 0 8px rgba(255, 68, 187, 0.8);
+  text-shadow: 0 0 8px rgba(0, 255, 204, 0.8);
 }
 
 .jk-now-playing {
@@ -147,8 +153,8 @@
   right: 12px;
   font-size: 9px;
   letter-spacing: 2px;
-  color: #ff44bb;
-  text-shadow: 0 0 8px rgba(255, 68, 187, 0.9);
+  color: #00ffcc;
+  text-shadow: 0 0 8px rgba(0, 255, 204, 0.9);
   animation: jk-blink 1.1s step-end infinite;
 }
 
@@ -161,7 +167,7 @@
 
 .jk-visualizer {
   width: 220px;
-  border-left: 1px solid rgba(255, 68, 187, 0.22);
+  border-left: 1px solid rgba(0, 255, 204, 0.22);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -179,7 +185,7 @@
 .jk-vis-canvas {
   width: 180px;
   height: 180px;
-  border: 1px solid rgba(255, 68, 187, 0.22);
+  border: 1px solid rgba(0, 255, 204, 0.22);
   display: block;
 }
 
@@ -198,11 +204,169 @@
   letter-spacing: 1px;
 }
 
+/* ── Custom track row ────────────────────────────────────────────────────── */
+
+.jk-track-custom {
+  border-color: rgba(0, 255, 204, 0.22) !important;
+  background: rgba(0, 255, 204, 0.02) !important;
+}
+
+.jk-track-custom:hover {
+  background: rgba(0, 255, 204, 0.07) !important;
+  border-color: rgba(0, 255, 204, 0.50) !important;
+}
+
+.jk-track-custom.jk-track-active {
+  border-color: #00ffcc !important;
+  background: rgba(0, 255, 204, 0.10) !important;
+  box-shadow: inset 0 0 18px rgba(0, 255, 204, 0.08) !important;
+}
+
+.jk-track-custom.jk-track-active .jk-track-action {
+  color: #00ffcc;
+  opacity: 1;
+  text-shadow: 0 0 8px rgba(0, 255, 204, 0.8);
+}
+
+.jk-track-custom .jk-now-playing {
+  color: #00ffcc;
+  text-shadow: 0 0 8px rgba(0, 255, 204, 0.9);
+}
+
+.jk-custom-btns {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.jk-upload-btn {
+  background: transparent;
+  border: 1px solid rgba(0, 255, 204, 0.45);
+  color: #00ffcc;
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  padding: 3px 8px;
+  cursor: pointer;
+  letter-spacing: 0.8px;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.jk-upload-btn:hover {
+  background: rgba(0, 255, 204, 0.14);
+  border-color: #00ffcc;
+}
+
+.jk-upload-btn:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.jk-delete-btn {
+  border-color: rgba(255, 60, 60, 0.45) !important;
+  color: #ff4444 !important;
+}
+
+.jk-delete-btn:hover {
+  background: rgba(255, 60, 60, 0.14) !important;
+  border-color: #ff4444 !important;
+}
+
+/* ── Volume control ──────────────────────────────────────────────────────── */
+
+.jk-vol-wrap {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 255, 204, 0.15);
+}
+
+.jk-vol-title {
+  font-size: 9px;
+  letter-spacing: 2.5px;
+  opacity: 0.45;
+  margin-bottom: 8px;
+}
+
+.jk-vol-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background: rgba(0, 255, 204, 0.18);
+  outline: none;
+  cursor: pointer;
+  border: none;
+}
+
+.jk-vol-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  background: #00ffcc;
+  box-shadow: 0 0 8px rgba(0, 255, 204, 0.9);
+  cursor: pointer;
+  border: none;
+}
+
+.jk-vol-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: #00ffcc;
+  box-shadow: 0 0 8px rgba(0, 255, 204, 0.9);
+  cursor: pointer;
+  border: none;
+  border-radius: 0;
+}
+
+.jk-vol-value {
+  font-size: 10px;
+  opacity: 0.60;
+  letter-spacing: 1.2px;
+}
+
+/* ── Progress / seek bar ─────────────────────────────────────────────────────── */
+
+.jk-seek-wrap {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding-top: 12px;
+  padding-bottom: 8px;
+  border-top: 1px solid rgba(0, 255, 204, 0.15);
+}
+
+.jk-progress-slider {
+  width: 100%;
+}
+
+.jk-progress-slider:disabled {
+  opacity: 0.22;
+  cursor: default;
+}
+
+.jk-progress-slider:disabled::-webkit-slider-thumb {
+  cursor: default;
+}
+
+.jk-progress-time {
+  font-size: 10px;
+  opacity: 0.60;
+  letter-spacing: 1.2px;
+  margin-top: 6px;
+}
+
 /* ── Status bar ──────────────────────────────────────────────────────────── */
 
 .jk-status-bar {
   padding: 6px 18px;
-  border-top: 1px solid rgba(255, 68, 187, 0.20);
+  border-top: 1px solid rgba(0, 255, 204, 0.20);
   font-size: 9px;
   opacity: 0.38;
   letter-spacing: 1.2px;

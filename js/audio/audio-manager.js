@@ -27,6 +27,12 @@ let _themeTimers      = [];    // all setTimeout / setInterval IDs for rhythmic 
 let _currentTheme     = 'space'; // active theme name
 let _arpIdx           = 0;     // synthwave arpeggio note index
 
+let _customAudio      = null;  // HTMLAudioElement for user-uploaded track
+let _customMediaNode  = null;  // MediaElementAudioSourceNode (created once per element)
+let _customTrackUrl   = null;  // URL currently assigned to _customAudio
+
+let _analyser         = null;  // AnalyserNode tapped off musicGain for the spectrum visualizer
+
 // ── Init (call once on first user gesture) ────────────────────────────────────
 export function initAudio() {
   if (ctx) return;
@@ -50,6 +56,12 @@ export function initAudio() {
   // Reverb used exclusively by ambient music layers
   _musicReverb = _buildReverb(4.2, 1.5);
   _musicReverb.connect(musicGain);
+
+  // Spectrum analyser — passive tap off musicGain (no output connection needed)
+  _analyser = ctx.createAnalyser();
+  _analyser.fftSize = 64;                  // 32 frequency bins — enough for 20 bars
+  _analyser.smoothingTimeConstant = 0.78;
+  musicGain.connect(_analyser);
 
   // Pause audio when tab is hidden, resume on return
   document.addEventListener('visibilitychange', () => {
@@ -98,9 +110,26 @@ function _noise(dur) {
 // A recursive timer adds solo melody notes from A-minor pentatonic every 4–12 s.
 
 export function startAmbient() {
-  if (!ctx) { _pendingAmbient = true; return; }  // auto-login: defer until first gesture
+  if (!ctx) { _pendingAmbient = true; return; }
   if (_ambientActive) return;
   _ambientActive = true;
+
+  // AudioContext may be suspended (created eagerly before a user gesture).
+  // Try to resume it; if the browser grants it (returning user / media-engagement),
+  // music starts immediately.  If blocked, the .catch() re-arms _pendingAmbient so
+  // the first pointer/key event (via resumeAudio()) will retry.
+  if (ctx.state === 'suspended') {
+    ctx.resume().then(() => {
+      if (!_ambientActive) return;  // stopAmbient() was called while we waited
+      musicGain.gain.setValueAtTime(0, ctx.currentTime);
+      musicGain.gain.linearRampToValueAtTime(0.55, ctx.currentTime + 5);
+      _startThemeByName(_currentTheme);
+    }).catch(() => {
+      _ambientActive = false;
+      _pendingAmbient = true;  // retry on next gesture via resumeAudio()
+    });
+    return;
+  }
 
   // Fade music gain in from silence over 5 s so it builds gradually
   musicGain.gain.setValueAtTime(0, ctx.currentTime);
@@ -237,7 +266,21 @@ export function stopAmbient() {
   musicGain.gain.setValueAtTime(musicGain.gain.value, ctx.currentTime);
   musicGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 2.0);
   _ambientActive = false;
-  _stopTheme();
+  // Delay oscillator teardown until after the gain fade completes so the
+  // 2-second fade-out is actually audible (previously stopped in 50 ms).
+  setTimeout(() => _stopTheme(), 2100);
+}
+
+/** Re-attempt AudioContext resume after an eager but suspended context creation.
+ *  Call on first user gesture when initAudio() was already called at page load. */
+export function resumeAudio() {
+  if (!ctx || ctx.state === 'running') return;
+  ctx.resume().then(() => {
+    if (_pendingAmbient) {
+      _pendingAmbient = false;
+      startAmbient();
+    }
+  }).catch(() => {});
 }
 
 export function duckMusic() {
@@ -269,11 +312,51 @@ function _trackTimer(id) { _themeTimers.push(id);        return id;  }
 
 function _stopTheme() {
   const t = ctx ? ctx.currentTime + 0.05 : 0;
-  _themeOscillators.forEach(o => { try { o.stop(t); } catch {} });
+  _themeOscillators.forEach(o => { try { o.stop(t); o.disconnect(); } catch {} });
   _themeOscillators = [];
   _themeTimers.forEach(id => { clearTimeout(id); clearInterval(id); });
   _themeTimers = [];
   if (_noteTimeout) { clearTimeout(_noteTimeout); _noteTimeout = null; }
+  // Pause custom audio track if it's running
+  if (_customAudio && !_customAudio.paused) {
+    _customAudio.pause();
+    _customAudio.currentTime = 0;
+  }
+}
+
+// ── Custom user track (uploaded MP3) ──────────────────────────────────────────
+function _playCustomAudio() {
+  if (!ctx || !_customTrackUrl) return;
+
+  // Create the <audio> element once; reuse it for all subsequent plays
+  if (!_customAudio) {
+    _customAudio = new Audio();
+    _customAudio.crossOrigin = 'anonymous';
+    _customAudio.loop = true;
+  }
+
+  // Update src only when the URL changes
+  if (_customAudio.src !== _customTrackUrl) {
+    _customAudio.src = _customTrackUrl;
+    _customAudio.load();
+  }
+
+  // Wire into the Web Audio graph once (MediaElementSourceNode cannot be recreated)
+  if (!_customMediaNode) {
+    _customMediaNode = ctx.createMediaElementSource(_customAudio);
+    _customMediaNode.connect(musicGain);
+  }
+
+  _customAudio.play().catch(() => {});
+}
+
+/** Set the URL for the user's custom uploaded track.
+ *  If 'custom' is the active theme, playback switches immediately. */
+export function setCustomTrackUrl(url) {
+  _customTrackUrl = url;
+  if (_currentTheme === 'custom' && _ambientActive) {
+    _playCustomAudio();
+  }
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -582,6 +665,7 @@ function _startThemeByName(name) {
   if      (name === 'synthwave') { _layerSynthBass(); _layerSynthPad(); _scheduleSynthArp(); }
   else if (name === 'jazz')      { _layerJazzBass();  _layerJazzPad();  _scheduleJazzNote(); }
   else if (name === 'cyberpunk') { _layerCyberSub();  _layerCyberDrone(); _scheduleCyberPulse(); }
+  else if (name === 'custom')    { _playCustomAudio(); }
   else                           { _layerDrone(); _layerPad(); _layerShimmer(); _scheduleNote(); }
 }
 
@@ -814,6 +898,7 @@ export function setMusicTheme(name) {
   if (name === _currentTheme) return;
   _currentTheme = name;
   _arpIdx = 0;
+  _musicPaused = false;   // switching themes always resumes playback
 
   musicGain.gain.cancelScheduledValues(ctx.currentTime);
   musicGain.gain.setTargetAtTime(0, ctx.currentTime, 0.22);
@@ -828,6 +913,90 @@ export function setMusicTheme(name) {
 }
 
 export function getMusicTheme() { return _currentTheme; }
+
+export function getAnalyser() { return _analyser; }
+
+// ── Music pause / resume ──────────────────────────────────────────────────────
+let _musicPaused      = false;
+let _pausedGainValue  = 0.55;
+
+/** Toggle music pause. Returns true if now paused, false if now playing. */
+export function toggleMusicPause() {
+  if (!ctx || !_ambientActive) return _musicPaused;
+  _musicPaused = !_musicPaused;
+  musicGain.gain.cancelScheduledValues(ctx.currentTime);
+  if (_musicPaused) {
+    _pausedGainValue = musicGain.gain.value || 0.55;
+    musicGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.35);
+    // Also pause HTMLAudioElement so it doesn't buffer/loop in silence
+    if (_currentTheme === 'custom' && _customAudio && !_customAudio.paused) {
+      setTimeout(() => _customAudio?.pause(), 380);
+    }
+  } else {
+    if (_currentTheme === 'custom' && _customAudio && _customAudio.paused) {
+      _customAudio.play().catch(() => {});
+    }
+    musicGain.gain.linearRampToValueAtTime(_pausedGainValue, ctx.currentTime + 0.35);
+  }
+  return _musicPaused;
+}
+
+export function isMusicPaused() { return _musicPaused; }
+
+// ── Music volume ──────────────────────────────────────────────────────────────
+export function setMusicVolume(v) {
+  const clamped = Math.max(0, Math.min(1, v));
+  _pausedGainValue = clamped;
+  if (musicGain && ctx && !_musicPaused) {
+    musicGain.gain.cancelScheduledValues(ctx.currentTime);
+    musicGain.gain.setTargetAtTime(clamped, ctx.currentTime, 0.05);
+  }
+}
+export function getMusicVolume() { return _pausedGainValue > 0 ? _pausedGainValue : 0.55; }
+
+/** Seek the custom track by ±seconds. No-op for procedural themes. */
+export function seekMusic(seconds) {
+  if (!_customAudio || _currentTheme !== 'custom') return;
+  const dur = _customAudio.duration;
+  if (!dur || !isFinite(dur)) return;
+  _customAudio.currentTime = Math.max(0, Math.min(dur, _customAudio.currentTime + seconds));
+}
+
+/** Returns duration of the current custom track in seconds, or 0. */
+export function getCustomTrackDuration() {
+  if (!_customAudio || _currentTheme !== 'custom') return 0;
+  return _customAudio.duration || 0;
+}
+
+/** Returns the current playback position of the custom track in seconds, or 0. */
+export function getCustomTrackCurrentTime() {
+  if (!_customAudio || _currentTheme !== 'custom') return 0;
+  return _customAudio.currentTime || 0;
+}
+
+/** Seek to an absolute position (seconds) in the custom track. */
+export function setMusicTime(seconds) {
+  if (!_customAudio || _currentTheme !== 'custom') return;
+  const dur = _customAudio.duration;
+  if (!dur || !isFinite(dur)) return;
+  _customAudio.currentTime = Math.max(0, Math.min(dur, seconds));
+}
+
+/** Clear the custom track URL and revert playback to the default space theme. */
+export function clearCustomTrackUrl() {
+  _customTrackUrl = null;
+  if (_customAudio && !_customAudio.paused) {
+    _customAudio.pause();
+    _customAudio.currentTime = 0;
+  }
+  if (_currentTheme === 'custom' && _ambientActive) {
+    _stopTheme();
+    _currentTheme = 'space';
+    musicGain.gain.cancelScheduledValues(ctx.currentTime);
+    musicGain.gain.linearRampToValueAtTime(0.55, ctx.currentTime + 2.0);
+    _startThemeByName('space');
+  }
+}
 
 // ── Phone booth SFX ──────────────────────────────────────────────────────────
 

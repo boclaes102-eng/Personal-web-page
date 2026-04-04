@@ -28,9 +28,9 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-const SUPABASE_URL      = 'https://iequlhfuqkqjaxxqsijd.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImllcXVsaGZ1cWtxamF4eHFzaWpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2NDA4ODQsImV4cCI6MjA5MDIxNjg4NH0.4zP_KVcsMzoT3bon8tlC5GUKTRC9i3vohuCTtq-Htx8';
-const SESSION_KEY       = 'ds_auth_v1';   // localStorage key for persisting the session
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
+
+const SESSION_KEY = 'ds_auth_v1';   // localStorage key for persisting the session
 
 let _session = null;   // { access_token, refresh_token, expires_at, user }
 
@@ -209,6 +209,123 @@ export async function loadUserTheme() {
     return rows?.[0]?.music_theme ?? null;
   } catch {
     return null;
+  }
+}
+
+// ── Jukebox: custom track upload / save / load (3 slots per user) ────────────
+// Slots are numbered 1-3. DB columns: custom_track_url, custom_track_url_2, custom_track_url_3.
+// Storage paths: {uid}/custom_1.{ext}, {uid}/custom_2.{ext}, {uid}/custom_3.{ext}
+
+function _trackCol(slot) {
+  return slot === 1 ? 'custom_track_url' : `custom_track_url_${slot}`;
+}
+
+/** Delete only the storage file (not the DB column). Used before re-uploading with a new name. */
+export async function deleteJukeboxFile(url) {
+  const token = getAccessToken();
+  if (!token || !url) return;
+  const prefix = `${SUPABASE_URL}/storage/v1/object/public/jukebox-tracks/`;
+  if (!url.startsWith(prefix)) return;
+  const path = url.slice(prefix.length);
+  await fetch(`${SUPABASE_URL}/storage/v1/object/jukebox-tracks/${path}`, {
+    method: 'DELETE',
+    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${token}` },
+  }).catch(() => {});
+}
+
+/**
+ * Upload an MP3 to slot 1-3 in Supabase Storage. Returns the public URL.
+ * @param {File}   file
+ * @param {number} slot  1-3
+ * @param {string} [title] sanitized title to embed in the path for persistence
+ */
+export async function uploadJukeboxTrack(file, slot = 1, title = '') {
+  const token = getAccessToken();
+  const uid   = getCurrentUser()?.id;
+  if (!token || !uid) throw new Error('Not signed in');
+
+  const ext      = file.name.split('.').pop().toLowerCase() || 'mp3';
+  const safeName = title
+    ? title.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 60) + '.' + ext
+    : `custom_${slot}.${ext}`;
+  const path = `${uid}/custom_${slot}/${safeName}`;
+
+  const res = await fetch(
+    `${SUPABASE_URL}/storage/v1/object/jukebox-tracks/${path}`,
+    {
+      method:  'POST',
+      headers: {
+        'apikey':        SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${token}`,
+        'Content-Type':  file.type || 'audio/mpeg',
+        'x-upsert':      'true',
+      },
+      body: file,
+    }
+  );
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `Upload failed (${res.status})`);
+  }
+
+  return `${SUPABASE_URL}/storage/v1/object/public/jukebox-tracks/${path}`;
+}
+
+/** Save a slot's URL to user_preferences. */
+export async function saveCustomTrackUrl(url, slot = 1) {
+  const token = getAccessToken();
+  const uid   = getCurrentUser()?.id;
+  if (!token || !uid) return;
+  await fetch(`${SUPABASE_URL}/rest/v1/user_preferences`, {
+    method:  'POST',
+    headers: { ..._headers(token), 'Prefer': 'resolution=merge-duplicates' },
+    body: JSON.stringify({ user_id: uid, [_trackCol(slot)]: url }),
+  }).catch(() => {});
+}
+
+/** Delete a slot's file from Storage and clear it in user_preferences. */
+export async function deleteCustomTrack(url, slot = 1) {
+  const token = getAccessToken();
+  const uid   = getCurrentUser()?.id;
+  if (!token || !uid) return;
+
+  const prefix = `${SUPABASE_URL}/storage/v1/object/public/jukebox-tracks/`;
+  if (url?.startsWith(prefix)) {
+    const storagePath = url.slice(prefix.length);
+    await fetch(`${SUPABASE_URL}/storage/v1/object/jukebox-tracks/${storagePath}`, {
+      method:  'DELETE',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${token}` },
+    }).catch(() => {});
+  }
+
+  await fetch(`${SUPABASE_URL}/rest/v1/user_preferences`, {
+    method:  'POST',
+    headers: { ..._headers(token), 'Prefer': 'resolution=merge-duplicates' },
+    body: JSON.stringify({ user_id: uid, [_trackCol(slot)]: null }),
+  }).catch(() => {});
+}
+
+/** Load all 3 custom track URLs. Returns an array [url1, url2, url3] (null where empty). */
+export async function loadAllCustomTrackUrls() {
+  const token = getAccessToken();
+  const uid   = getCurrentUser()?.id;
+  if (!token || !uid) return [null, null, null];
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/user_preferences?user_id=eq.${uid}&select=custom_track_url,custom_track_url_2,custom_track_url_3`,
+      { headers: _headers(token) }
+    );
+    if (!res.ok) return [null, null, null];
+    const rows = await res.json();
+    const row  = rows?.[0];
+    return [
+      row?.custom_track_url   ?? null,
+      row?.custom_track_url_2 ?? null,
+      row?.custom_track_url_3 ?? null,
+    ];
+  } catch {
+    return [null, null, null];
   }
 }
 

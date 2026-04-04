@@ -30,10 +30,11 @@ export function startPong(canvas, onGameOver) {
   const BALL_R     = Math.round(H * 0.016);
   const WIN_SCORE  = 7;
 
-  const PLAYER_SPD = H * 0.011;
-  const CPU_SPD    = H * 0.0085;
-  const BALL_INIT  = W * 0.0032;
-  const BALL_MAX   = W * 0.022;
+  const S          = 60 / 144;          // scale factor: keep real-world speed at 144 ticks/s
+  const PLAYER_SPD = H * 0.011 * S;
+  const CPU_SPD    = H * 0.0085 * S;
+  const BALL_INIT  = W * 0.0032 * S;
+  const BALL_MAX   = W * 0.022 * S;
 
   // ── State ─────────────────────────────────────────────────────────────────────
   let py = H / 2 - PAD_H / 2;
@@ -200,7 +201,7 @@ export function startPong(canvas, onGameOver) {
         && by >= py && by <= py + PAD_H) {
       bx = px_x + PAD_W + BALL_R;
       vx = Math.abs(vx) * 1.06;
-      vy = ((by - (py + PAD_H / 2)) / (PAD_H / 2)) * H * 0.014;
+      vy = ((by - (py + PAD_H / 2)) / (PAD_H / 2)) * H * 0.014 * S;
       sfx('pong-paddle');
     }
 
@@ -211,7 +212,7 @@ export function startPong(canvas, onGameOver) {
         && by >= cy && by <= cy + PAD_H) {
       bx = cx_x - BALL_R;
       vx = -Math.abs(vx) * 1.06;
-      vy = ((by - (cy + PAD_H / 2)) / (PAD_H / 2)) * H * 0.014;
+      vy = ((by - (cy + PAD_H / 2)) / (PAD_H / 2)) * H * 0.014 * S;
       sfx('pong-paddle');
     }
 
@@ -262,16 +263,24 @@ export function startPong(canvas, onGameOver) {
     }, 700);
   }
 
-  // ── Main loop ─────────────────────────────────────────────────────────────────
-  // The loop always draws; update() is a no-op unless gameState === 'playing'.
-  // When gameState becomes 'gameover', the loop draws the result once and stops.
-  function loop() {
-    update();
+  // ── Main loop — fixed 144 fps logic, uncapped render ────────────────────────
+  // Accumulate real elapsed time; run update() in 6.94 ms steps so game speed
+  // is the same on 60 Hz, 144 Hz, and 240 Hz displays.
+  const TICK = 1000 / 144;
+  let lastTime = 0, accum = 0;
+
+  function loop(ts) {
+    const dt = lastTime ? Math.min(ts - lastTime, 100) : 0;
+    lastTime = ts;
+    accum += dt;
+    while (accum >= TICK) {
+      update();
+      accum -= TICK;
+    }
     draw();
     if (gameState !== 'gameover') {
       rafId = requestAnimationFrame(loop);
     }
-    // If gameover: RAF is not rescheduled — loop terminates naturally.
   }
 
   // ── Initial 3-2-1 before the very first serve ─────────────────────────────────

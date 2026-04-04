@@ -22,15 +22,16 @@ export function startBreakout(canvas, onGameOver) {
   const PAD_W   = Math.round(W * 0.125);   // ~100 px at W=800
   const PAD_H   = Math.round(H * 0.026);   // ~13 px at H=500
   const PAD_Y   = H - Math.round(H * 0.08);
-  const PAD_SPD = W * 0.008;               // key-controlled speed
+  const S       = 60 / 144;                // scale factor: keep real-world speed at 144 ticks/s
+  const PAD_SPD = W * 0.008 * S;           // key-controlled speed
 
   const BALL_R  = Math.round(H * 0.014);   // ~7 px
 
-  // Ball speed progression (pixels/frame at 60 fps)
-  const BALL_SPD_INIT  = W * 0.0028;  // slow start — feels manageable
-  const BALL_SPD_MAX   = W * 0.015;   // hard cap — fast but fair
-  const BALL_SPD_BRICK = W * 0.0002;  // gained per brick destroyed
-  const BALL_SPD_PAD   = W * 0.0003;  // gained every 4th paddle bounce
+  // Ball speed progression (pixels/tick at 144 ticks/s)
+  const BALL_SPD_INIT  = W * 0.0028 * S;  // slow start — feels manageable
+  const BALL_SPD_MAX   = W * 0.015  * S;  // hard cap — fast but fair
+  const BALL_SPD_BRICK = W * 0.0002 * S;  // gained per brick destroyed
+  const BALL_SPD_PAD   = W * 0.0003 * S;  // gained every 4th paddle bounce
 
   // Brick grid: 10 cols × 6 rows
   const COLS      = 10;
@@ -149,8 +150,8 @@ export function startBreakout(canvas, onGameOver) {
       const a = (i / 8) * Math.PI * 2;
       particles.push({
         x, y,
-        vx: Math.cos(a) * (1 + Math.random() * 2),
-        vy: Math.sin(a) * (1 + Math.random() * 2),
+        vx: Math.cos(a) * (1 + Math.random() * 2) * S,
+        vy: Math.sin(a) * (1 + Math.random() * 2) * S,
         life: 1.0,
         color,
       });
@@ -367,7 +368,7 @@ export function startBreakout(canvas, onGameOver) {
     // Particle update
     particles = particles.filter(p => {
       p.x += p.vx; p.y += p.vy;
-      p.life -= 0.04;
+      p.life -= 0.04 * S;
       return p.life > 0;
     });
 
@@ -404,10 +405,21 @@ export function startBreakout(canvas, onGameOver) {
     setTimeout(() => onGameOver(score), 1800);
   }
 
-  // ── Loop ──────────────────────────────────────────────────────────────────────
-  function loop() {
+  // ── Loop — fixed 144 fps logic, uncapped render ───────────────────────────────
+  // Accumulate real elapsed time; run update() in 6.94 ms steps so game speed
+  // is the same on 60 Hz, 144 Hz, and 240 Hz displays.
+  const TICK = 1000 / 144;
+  let lastTime = 0, accum = 0;
+
+  function loop(ts) {
     if (gameOver) { showGameOver(); return; }
-    update();
+    const dt = lastTime ? Math.min(ts - lastTime, 100) : 0;
+    lastTime = ts;
+    accum += dt;
+    while (accum >= TICK) {
+      update();
+      accum -= TICK;
+    }
     draw();
     rafId = requestAnimationFrame(loop);
   }

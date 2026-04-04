@@ -21,10 +21,11 @@ export function startGalaga(canvas, onGameOver) {
   // ── Layout ────────────────────────────────────────────────────────────────────
   const SHIP_W   = Math.round(W * 0.050);  // ~40 px wide at W=800
   const SHIP_H   = Math.round(H * 0.065);  // ~32 px tall at H=500
-  const SHIP_SPD = W * 0.006;              // ~4.8 px/frame
+  const S        = 60 / 144;               // scale factor: keep real-world speed at 144 ticks/s
+  const SHIP_SPD = W * 0.006 * S;          // ~2 px/tick at 144
   const BULLET_W = 3;
   const BULLET_H = Math.round(H * 0.030);  // ~15 px
-  const BULLET_SPD = H * 0.018;            // ~9 px/frame
+  const BULLET_SPD = H * 0.018 * S;        // ~3.75 px/tick at 144
   const MAX_BULLETS = 2;                    // max player bullets on screen
 
   // Enemy grid: 3 rows × 8 cols = 24 enemies
@@ -66,12 +67,12 @@ export function startGalaga(canvas, onGameOver) {
 
   // Enemy bullets (fired by enemies)
   let eBullets = [];
-  const E_BULLET_SPD = H * 0.008;  // ~4 px/frame — slow enough to dodge
+  const E_BULLET_SPD = H * 0.008 * S;  // ~1.67 px/tick at 144 — slow enough to dodge
 
   // Formation sway
   let fSwayX    = 0;             // current horizontal offset applied to all formation enemies
   let fSwayDir  = 1;             // +1 or -1
-  let fSwaySpd  = W * 0.0015;   // px/frame, increases each wave
+  let fSwaySpd  = W * 0.0015 * S;   // px/tick, increases each wave
 
   // Enemies array — each: { row, col, x, y, alive, diving, diveVx, diveVy,
   //                          diveOriginX, diveOriginY, returning }
@@ -109,11 +110,11 @@ export function startGalaga(canvas, onGameOver) {
     eBullets = [];
     diveTimer  = fps(2.5);
     eBulTimer  = fps(3.0);
-    fSwaySpd  = W * (0.0015 + (wave - 1) * 0.0004);  // slightly faster each wave
+    fSwaySpd  = W * (0.0015 + (wave - 1) * 0.0004) * S;  // slightly faster each wave
   }
 
-  // Convert seconds to frames at 60 fps
-  function fps(s) { return Math.round(s * 60 + (Math.random() - 0.5) * 30); }
+  // Convert seconds to frames at 144 fps
+  function fps(s) { return Math.round(s * 144 + (Math.random() - 0.5) * 72); }
 
   // ── Ship drawing ──────────────────────────────────────────────────────────────
   function drawShip(x, y) {
@@ -187,7 +188,7 @@ export function startGalaga(canvas, onGameOver) {
   function spawnExplosion(x, y, color) {
     for (let i = 0; i < 12; i++) {
       const angle = (i / 12) * Math.PI * 2;
-      const spd   = 1.5 + Math.random() * 3;
+      const spd   = (1.5 + Math.random() * 3) * S;
       particles.push({
         x, y,
         vx: Math.cos(angle) * spd,
@@ -282,8 +283,8 @@ export function startGalaga(canvas, onGameOver) {
         e.y = e.homeY;
       } else if (e.diving) {
         // Dive toward last-known player position with sine wobble
-        e.diveSin += 0.18;
-        e.x += e.diveVx + Math.sin(e.diveSin) * 1.8;
+        e.diveSin += 0.18 * S;
+        e.x += e.diveVx + Math.sin(e.diveSin) * 1.8 * S;
         e.y += e.diveVy;
         // Once enemy exits bottom of screen → respawn at top formation spot
         if (e.y > H + E_H * 2) {
@@ -303,7 +304,7 @@ export function startGalaga(canvas, onGameOver) {
           e.x = targetX; e.y = targetY;
           e.returning = false;
         } else {
-          const spd = Math.min(dist, H * 0.010);
+          const spd = Math.min(dist, H * 0.010 * S);
           e.x += (dx / dist) * spd;
           e.y += (dy / dist) * spd;
         }
@@ -323,7 +324,7 @@ export function startGalaga(canvas, onGameOver) {
         const aimX = shipX + SHIP_W / 2 - (target.x + E_W / 2);
         const aimY = SHIP_Y - target.y;
         const dist = Math.hypot(aimX, aimY) || 1;
-        const diveSpd = H * (0.0055 + (wave - 1) * 0.0008); // faster each wave
+        const diveSpd = H * (0.0055 + (wave - 1) * 0.0008) * S; // faster each wave
         target.diveVx = (aimX / dist) * diveSpd * 0.55;  // softer horizontal component
         target.diveVy = (aimY / dist) * diveSpd;
       }
@@ -386,7 +387,7 @@ export function startGalaga(canvas, onGameOver) {
           gameOver = true;
         } else {
           invincible      = true;
-          invincibleTimer = 120;  // 2 seconds at 60 fps
+          invincibleTimer = 288;  // 2 seconds at 144 fps
         }
       }
     }
@@ -394,14 +395,14 @@ export function startGalaga(canvas, onGameOver) {
     // Invincibility countdown
     if (invincible) {
       invincibleTimer--;
-      flashOn = Math.floor(invincibleTimer / 6) % 2 === 0;  // flash every 6 frames
+      flashOn = Math.floor(invincibleTimer / 14) % 2 === 0;  // flash every ~14 frames (≈ 10 frames at 60 fps)
       if (invincibleTimer <= 0) { invincible = false; flashOn = true; }
     }
 
     // Particle update
     particles = particles.filter(p => {
       p.x += p.vx; p.y += p.vy;
-      p.life -= 0.035;
+      p.life -= 0.035 * S;
       return p.life > 0;
     });
 
@@ -478,10 +479,21 @@ export function startGalaga(canvas, onGameOver) {
     setTimeout(() => onGameOver(score), 1800);
   }
 
-  // ── Loop ──────────────────────────────────────────────────────────────────────
-  function loop() {
+  // ── Loop — fixed 144 fps logic, uncapped render ───────────────────────────────
+  // Accumulate real elapsed time; run update() in 6.94 ms steps so game speed
+  // is the same on 60 Hz, 144 Hz, and 240 Hz displays.
+  const TICK = 1000 / 144;
+  let lastTime = 0, accum = 0;
+
+  function loop(ts) {
     if (gameOver) { showGameOver(); return; }
-    update();
+    const dt = lastTime ? Math.min(ts - lastTime, 100) : 0;
+    lastTime = ts;
+    accum += dt;
+    while (accum >= TICK) {
+      update();
+      accum -= TICK;
+    }
     draw();
     rafId = requestAnimationFrame(loop);
   }

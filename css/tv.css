@@ -273,7 +273,7 @@
 }
 .tv-wx-day  { display: flex; flex-direction: column; align-items: center; gap: 0.18rem; }
 .tv-wx-dn   { font-size: 0.76em; color: var(--tv-ph-dim); }
-.tv-wx-ic   { font-size: 1.4rem; }
+.tv-wx-ic   { font-size: 1.4rem; width: 2rem; height: 2rem; display: flex; align-items: center; justify-content: center; line-height: 1; }
 .tv-wx-hi   { font-size: 0.88em; font-weight: bold; }
 .tv-wx-lo   { font-size: 0.76em; color: var(--tv-ph-dim); }
 

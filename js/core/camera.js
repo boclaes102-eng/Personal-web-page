@@ -16,6 +16,7 @@ import { showArcade, hideArcade }              from '../arcade/arcade-ui.js';
 import { showPhoneUI, hidePhoneUI }            from '../phonebooth/phone-ui.js';
 import { showJukeboxUI, hideJukeboxUI }        from '../jukebox/jukebox-ui.js';
 import { sfx, duckMusic, unduckMusic }         from '../audio/audio-manager.js';
+import { setPresenceRoom }                     from '../presence/presence.js';
 
 const { gsap } = window;
 
@@ -80,21 +81,26 @@ export function zoomIn(group) {
       if (isComputer) {
         _currentZoomType = 'computer';
         duckMusic();
+        setPresenceRoom('computer');
         showDesktop(() => zoomOut());
       } else if (isTelevision) {
         _currentZoomType = 'television';
         duckMusic();
+        setPresenceRoom('television');
         showTV(() => zoomOut());
       } else if (isArcade) {
         _currentZoomType = 'arcade';
         duckMusic();
+        setPresenceRoom('arcade');
         showArcade(() => zoomOut());
       } else if (isPhoneBooth) {
         _currentZoomType = 'phonebooth';
         duckMusic();
+        setPresenceRoom('phonebooth');
         showPhoneUI(() => zoomOut());
       } else if (isJukebox) {
         _currentZoomType = 'jukebox';
+        setPresenceRoom('jukebox');
         // Don't duck music — the jukebox IS the music UI
         showJukeboxUI(() => zoomOut());
       } else {
@@ -117,11 +123,13 @@ export function zoomIn(group) {
 // ── Zoom in to a celestial body (easter egg) ──────────────────────────────────
 // 'target' shape: { mesh, lore, pos:THREE.Vector3, zoomDist:number, rotSpeed:number }
 let _currentZoomType = 'project'; // kept private — only zoom functions need it
+export let currentCelestialTarget = null; // exposed so input.js can rotate the mesh on drag
 
 export function zoomToCelestial(target) {
   sfx('zoom-in');
   cam.mode = 'transitioning';
   _currentZoomType = 'celestial';
+  currentCelestialTarget = target;
   cam.savedYaw   = cam.yaw;
   cam.savedPitch = cam.pitch;
   document.getElementById('header').classList.add('hidden');
@@ -166,6 +174,7 @@ export function zoomOut() {
 }
 
 function _doZoomOut() {
+  currentCelestialTarget = null;
   sfx('zoom-out');
   unduckMusic();
   const restoredTarget = new THREE.Vector3(
@@ -182,6 +191,7 @@ function _doZoomOut() {
       _currentZoomType = 'project';
       document.getElementById('header').classList.remove('hidden');
       shared.hoveredFrame = null;
+      setPresenceRoom('lobby');
     },
   });
   tl.to(cam.pos,    { x: 0, y: 0, z: 0,                                              duration: 1.5, ease: 'power3.inOut' }, 0);

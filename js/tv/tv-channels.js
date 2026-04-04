@@ -213,11 +213,16 @@ function _renderChannel(idx) {
 function _clearLive()   { if (_liveTimer) { clearInterval(_liveTimer); _liveTimer = null; } }
 function _nowTime()     { return new Date().toLocaleTimeString('en-GB', { hour12: false }); }
 function _div(cls)      { const d = document.createElement('div'); d.className = cls; return d; }
+function _esc(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
+  );
+}
 function _loading(el, msg = 'FETCHING DATA...') {
   el.innerHTML = `<div class="tv-loading"><span class="tv-blink">▌</span> ${msg}</div>`;
 }
 function _error(el, msg, detail = '') {
-  el.innerHTML = `<div class="tv-fetch-error">${msg}${detail ? `<br><span class="tv-err-detail">${detail}</span>` : ''}</div>`;
+  el.innerHTML = `<div class="tv-fetch-error">${msg}${detail ? `<br><span class="tv-err-detail">${_esc(detail)}</span>` : ''}</div>`;
 }
 
 // WMO weather codes → display info

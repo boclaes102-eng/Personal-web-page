@@ -8,7 +8,8 @@ import * as THREE from 'three';
 import { camera, renderer, composer, hdrTarget, bloomPass } from './renderer.js';
 import { shared }                       from './state.js';
 import { cam, camDir, updateCameraMatrix,
-         zoomIn, zoomToCelestial, zoomOut, PITCH_LIMIT } from './camera.js';
+         zoomIn, zoomToCelestial, zoomOut, PITCH_LIMIT,
+         currentCelestialTarget } from './camera.js';
 import { frames, clickTargets }         from '../scene/frames.js';
 import { celestialTargets, celestialMeshes } from '../scene/celestials.js';
 
@@ -23,6 +24,10 @@ let pointerDownOrigin = { x: 0, y: 0 };
 let lastDragX  = 0, lastDragY = 0;
 let isDragging = false;
 let dragDist   = 0;
+
+// Celestial momentum — velocity carries on after pointer release
+let _celVelX = 0, _celVelY = 0;
+const _CEL_DAMPING = 0.90;  // fraction kept per frame (~60fps feel; decays in ~1.5 s)
 
 // ── Hover detection ───────────────────────────────────────────────────────────
 function checkHover() {
@@ -76,6 +81,8 @@ export function setupInput() {
     pointerDownOrigin = { x: e.clientX, y: e.clientY };
     lastDragX = e.clientX;
     lastDragY = e.clientY;
+    _celVelX  = 0;
+    _celVelY  = 0;
     document.body.classList.add('dragging');
   });
 
@@ -93,6 +100,16 @@ export function setupInput() {
         cam.pitch + (e.clientY - lastDragY) * 0.004,
         -PITCH_LIMIT, PITCH_LIMIT
       );
+      lastDragX = e.clientX;
+      lastDragY = e.clientY;
+    } else if (isDragging && cam.mode === 'zoomed' && currentCelestialTarget) {
+      // Drag-to-spin the celestial mesh in 360°
+      const dx = e.clientX - lastDragX;
+      const dy = e.clientY - lastDragY;
+      _celVelX = dx * 0.005;
+      _celVelY = dy * 0.005;
+      currentCelestialTarget.mesh.rotation.y += _celVelX;
+      currentCelestialTarget.mesh.rotation.x += _celVelY;
       lastDragX = e.clientX;
       lastDragY = e.clientY;
     } else if (cam.mode === 'freelook' && !isDragging) {
@@ -125,9 +142,18 @@ export function setupInput() {
     if (cam.mode === 'freelook') {
       cam.yaw   -= dx * 0.005;
       cam.pitch  = THREE.MathUtils.clamp(cam.pitch + dy * 0.005, -PITCH_LIMIT, PITCH_LIMIT);
+    } else if (cam.mode === 'zoomed' && currentCelestialTarget) {
+      _celVelX = dx * 0.005;
+      _celVelY = dy * 0.005;
+      currentCelestialTarget.mesh.rotation.y += _celVelX;
+      currentCelestialTarget.mesh.rotation.x += _celVelY;
     }
     lastTX = t.clientX; lastTY = t.clientY;
   }, { passive: false });
+
+  canvas.addEventListener('touchstart', () => {
+    _celVelX = 0; _celVelY = 0;
+  }, { passive: true });
 
   canvas.addEventListener('touchend', () => {
     if (touchDist < 12) handleClick();
@@ -153,4 +179,14 @@ export function setupInput() {
     hdrTarget.setSize(innerWidth, innerHeight);
     bloomPass.resolution.set(innerWidth / 2, innerHeight / 2);
   });
+}
+
+// Called every animation frame from main.js — applies inertia after drag release.
+export function applyCelestialMomentum() {
+  if (isDragging || !currentCelestialTarget) return;
+  if (Math.abs(_celVelX) < 0.00005 && Math.abs(_celVelY) < 0.00005) return;
+  currentCelestialTarget.mesh.rotation.y += _celVelX;
+  currentCelestialTarget.mesh.rotation.x += _celVelY;
+  _celVelX *= _CEL_DAMPING;
+  _celVelY *= _CEL_DAMPING;
 }
