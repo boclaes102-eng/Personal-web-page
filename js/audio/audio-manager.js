@@ -285,6 +285,7 @@ export function resumeAudio() {
 
 export function duckMusic() {
   if (!ctx) return;
+  if (_musicPaused) return;             // don't duck an already-paused track
   musicGain.gain.cancelScheduledValues(ctx.currentTime);
   musicGain.gain.setTargetAtTime(0.08, ctx.currentTime, 0.30);
 }
@@ -942,7 +943,8 @@ export function toggleMusicPause() {
   return _musicPaused;
 }
 
-export function isMusicPaused() { return _musicPaused; }
+export function isMusicPaused()  { return _musicPaused; }
+export function isAudioRunning() { return !!ctx && ctx.state === 'running'; }
 
 // ── Music volume ──────────────────────────────────────────────────────────────
 export function setMusicVolume(v) {

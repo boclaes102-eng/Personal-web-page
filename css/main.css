@@ -19,6 +19,29 @@ body.hovering  { cursor: pointer;  }
   inset: 0;
 }
 
+/* ── Audio nudge ──────────────────────────────────────────── */
+#audio-nudge {
+  display: none;   /* shown via JS only when autoplay is blocked */
+  position: fixed;
+  bottom: 3.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 800;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.72em;
+  letter-spacing: 0.14em;
+  color: rgba(0, 255, 65, 0.6);
+  border: 1px solid rgba(0, 255, 65, 0.2);
+  padding: 0.35rem 1rem;
+  background: rgba(4, 10, 4, 0.75);
+  pointer-events: none;
+  animation: nudge-pulse 2s ease-in-out infinite;
+}
+@keyframes nudge-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
+
 /* ── Loading screen ───────────────────────────────────────── */
 #loading {
   position: fixed;

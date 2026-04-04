@@ -9,7 +9,7 @@ import { buildEnvironment, updateEnvironment } from './scene/environment.js';
 import { buildCelestials, updateCelestials }   from './scene/celestials.js';
 import { buildFrames, animateFrames }          from './scene/frames.js';
 import { setupInput, applyCelestialMomentum }  from './core/input.js';
-import { initAudio, startAmbient, stopAmbient, setInitialTheme, setCustomTrackUrl, resumeAudio } from './audio/audio-manager.js';
+import { initAudio, startAmbient, stopAmbient, setInitialTheme, setCustomTrackUrl, resumeAudio, isMusicPaused, isAudioRunning } from './audio/audio-manager.js';
 import { parseHashTokens, checkSession, signOut, loadUserTheme, loadAllCustomTrackUrls } from './auth/auth.js';
 import { initPresence, destroyPresence } from './presence/presence.js';
 import { showAuthOverlay }                     from './auth/auth-ui.js';
@@ -121,6 +121,13 @@ function startWorld(user) {
     }
     if (theme) setInitialTheme(theme);
     startAmbient();
+    // After startAmbient, check if the AudioContext is still blocked.
+    // If so, show the nudge so the user knows to click to enable audio.
+    setTimeout(() => {
+      if (_nudgeEl && !isMusicPaused() && !isAudioRunning()) {
+        _nudgeEl.style.display = 'block';
+      }
+    }, 800);
   }).catch(() => startAmbient());
 
   requestAnimationFrame(animate);
@@ -134,7 +141,12 @@ async function bootstrap() {
 
   // On first gesture: retry resuming a suspended context so music starts without
   // requiring a second click (handles new visits or post-reload auto-login).
-  function _onFirstGesture() { initAudio(); resumeAudio(); }
+  const _nudgeEl = document.getElementById('audio-nudge');
+  function _onFirstGesture() {
+    initAudio();
+    resumeAudio();
+    if (_nudgeEl) _nudgeEl.style.display = 'none';
+  }
   window.addEventListener('pointerdown', _onFirstGesture, { once: true });
   window.addEventListener('keydown',     _onFirstGesture, { once: true });
   // 1. Check for Supabase callback tokens in the URL hash

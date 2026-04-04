@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Background -->
+  <rect width="32" height="32" rx="4" fill="#040a04"/>
+
+  <!-- Stars -->
+  <circle cx="4"  cy="4"  r="0.7" fill="#00ff41" opacity="0.7"/>
+  <circle cx="28" cy="6"  r="0.5" fill="#00ff41" opacity="0.5"/>
+  <circle cx="6"  cy="26" r="0.5" fill="#00ff41" opacity="0.5"/>
+  <circle cx="27" cy="25" r="0.7" fill="#00ff41" opacity="0.6"/>
+  <circle cx="14" cy="3"  r="0.4" fill="#00ff41" opacity="0.4"/>
+
+  <!-- Ring shadow (behind planet) — left half -->
+  <ellipse cx="16" cy="17" rx="11" ry="3.5"
+           fill="none" stroke="#006618" stroke-width="2"
+           stroke-dasharray="17.3 17.3" stroke-dashoffset="0"
+           transform="rotate(0)"/>
+
+  <!-- Planet -->
+  <circle cx="16" cy="16" r="8" fill="#040a04" stroke="#00ff41" stroke-width="1.2"/>
+  <!-- Planet surface lines for detail -->
+  <ellipse cx="16" cy="16" rx="8" ry="3" fill="none" stroke="#00aa2b" stroke-width="0.6" opacity="0.6"/>
+  <ellipse cx="16" cy="13" rx="6" ry="1.8" fill="none" stroke="#00aa2b" stroke-width="0.5" opacity="0.4"/>
+
+  <!-- Ring (in front of planet) — right half -->
+  <ellipse cx="16" cy="17" rx="11" ry="3.5"
+           fill="none" stroke="#00ff41" stroke-width="2"
+           stroke-dasharray="17.3 17.3" stroke-dashoffset="17.3"/>
+
+  <!-- Glow dot on planet -->
+  <circle cx="13" cy="13" r="1.5" fill="#00ff41" opacity="0.25"/>
+</svg>
