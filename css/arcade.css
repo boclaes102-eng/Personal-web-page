@@ -194,6 +194,13 @@
   text-align:      center;
 }
 
+/* Thin divider between game items and the leaderboard shortcut */
+.arc-menu-separator {
+  border:          none;
+  border-top:      1px solid rgba(255, 68, 255, 0.15);
+  margin:          0.3rem 0;
+}
+
 /* ═══════════════════════════════════════════════════════════
    SCREEN: GAME CANVAS
    ═══════════════════════════════════════════════════════════ */
@@ -355,6 +362,25 @@
   color:           var(--game-color, var(--arc-neon));
   text-shadow:     0 0 10px var(--game-color, var(--arc-neon));
   flex:            1;
+}
+
+/* Live badge — shown when Realtime WebSocket is connected */
+.arc-lb-live {
+  display:         inline-flex;
+  align-items:     center;
+  gap:             0.3rem;
+  font-size:       0.68em;
+  letter-spacing:  0.12em;
+  color:           #44ff88;
+  text-shadow:     0 0 8px #44ff88;
+  border:          1px solid rgba(68, 255, 136, 0.35);
+  padding:         0.1rem 0.45rem;
+  animation:       arc-live-pulse 2s ease-in-out infinite;
+  flex-shrink:     0;
+}
+@keyframes arc-live-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.55; }
 }
 
 /* Game tabs */

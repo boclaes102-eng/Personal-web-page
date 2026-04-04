@@ -275,7 +275,7 @@ async function _news(ch, ep) {
       )
     );
     if (ep !== _epoch) return;
-    headlines = stories.filter(s => s && s.title).map(s => s.title.toUpperCase());
+    headlines = stories.filter(s => s && s.title).map(s => _esc(s.title.toUpperCase()));
   } catch { /* fall through to error message */ }
 
   if (!headlines.length) headlines = ['NEWS FEED CURRENTLY UNAVAILABLE'];

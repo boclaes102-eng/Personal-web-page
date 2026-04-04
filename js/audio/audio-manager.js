@@ -291,8 +291,9 @@ export function duckMusic() {
 
 export function unduckMusic() {
   if (!ctx) return;
+  if (_musicPaused) return;           // don't undo a user pause
   musicGain.gain.cancelScheduledValues(ctx.currentTime);
-  musicGain.gain.setTargetAtTime(0.55, ctx.currentTime, 0.55);
+  musicGain.gain.setTargetAtTime(_pausedGainValue, ctx.currentTime, 0.55);
 }
 
 // ── Throttle helper (prevents audio spam on rapid repeated events) ────────────
@@ -952,7 +953,7 @@ export function setMusicVolume(v) {
     musicGain.gain.setTargetAtTime(clamped, ctx.currentTime, 0.05);
   }
 }
-export function getMusicVolume() { return _pausedGainValue > 0 ? _pausedGainValue : 0.55; }
+export function getMusicVolume() { return _pausedGainValue; }
 
 /** Seek the custom track by ±seconds. No-op for procedural themes. */
 export function seekMusic(seconds) {

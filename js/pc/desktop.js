@@ -1,7 +1,7 @@
 /**
  * desktop.js
  * Retro "SecureOS" desktop home screen shown when the user clicks the computer.
- * Displays 5 clickable app icons; clicking an icon opens a windowed tool.
+ * Left sidebar shows categories; right panel shows apps for the selected category.
  * Pressing ESC or [ SHUTDOWN ] closes the desktop and triggers the camera zoom-out.
  *
  * Public API:
@@ -11,30 +11,25 @@
 
 import { sfx } from '../audio/audio-manager.js';
 
+// ── Categories ────────────────────────────────────────────────────────────────
+
+const CATEGORIES = [
+  { id: 'crypto',  label: 'CRYPTOGRAPHY',    icon: '🔐' },
+  { id: 'recon',   label: 'RECON & ANALYSIS', icon: '🔍' },
+  { id: 'field',   label: 'FIELD TOOLS',      icon: '🛠' },
+  { id: 'ai',      label: 'A.I. SYSTEM',      icon: '🤖' },
+];
+
 // ── App definitions ───────────────────────────────────────────────────────────
 
 const APPS = [
+  // ── CRYPTOGRAPHY ──
   {
-    id:   'panalyze',
-    exe:  'PANALYZE.EXE',
-    name: 'Password Analyzer',
-    desc: 'Strength check\n& breach lookup',
-    art: [
-      '╔══════╗',
-      '║ **** ║',
-      '║ *  * ║',
-      '║ **** ║',
-      '╚══╦═══╝',
-      '   ║    ',
-      '  ═╩═   ',
-    ],
-    loader: () => import('./tools/panalyze.js'),
-  },
-  {
-    id:   'hashgen',
-    exe:  'HASHGEN.EXE',
-    name: 'Hash Generator',
-    desc: 'SHA-1 / 256 / 512\nidentifier',
+    id:       'hashgen',
+    cat:      'crypto',
+    exe:      'HASHGEN.EXE',
+    name:     'Hash Generator',
+    desc:     'Generate SHA-1, SHA-256 and SHA-512 hashes from any input string or file.',
     art: [
       '  #  #  ',
       '########',
@@ -47,10 +42,11 @@ const APPS = [
     loader: () => import('./tools/hashgen.js'),
   },
   {
-    id:   'cipher',
-    exe:  'CIPHER.EXE',
-    name: 'Cipher Tool',
-    desc: 'ROT13 · Caesar\nBase64 · Hex · URL',
+    id:       'cipher',
+    cat:      'crypto',
+    exe:      'CIPHER.EXE',
+    name:     'Cipher Tool',
+    desc:     'Encode and decode text with ROT13, Caesar, Base64, Hex and URL encoding.',
     art: [
       ' A → N  ',
       ' B → O  ',
@@ -63,10 +59,47 @@ const APPS = [
     loader: () => import('./tools/cipher.js'),
   },
   {
-    id:   'netinfo',
-    exe:  'NETINFO.EXE',
-    name: 'Network Info',
-    desc: 'IP geolocation\n& browser info',
+    id:       'jwtdec',
+    cat:      'crypto',
+    exe:      'JWTDEC.EXE',
+    name:     'JWT Decoder',
+    desc:     'Decode and inspect JWT tokens — view header, payload and signature claims.',
+    art: [
+      'eyJ····',
+      '.······',
+      '.SflKx·',
+      '-------',
+      'HDR·PLD',
+      '  SIG  ',
+      '       ',
+    ],
+    loader: () => import('./tools/jwtdec.js'),
+  },
+
+  // ── RECON & ANALYSIS ──
+  {
+    id:       'panalyze',
+    cat:      'recon',
+    exe:      'PANALYZE.EXE',
+    name:     'Password Analyzer',
+    desc:     'Check password strength, entropy score and known breach database lookup.',
+    art: [
+      '╔══════╗',
+      '║ **** ║',
+      '║ *  * ║',
+      '║ **** ║',
+      '╚══╦═══╝',
+      '   ║    ',
+      '  ═╩═   ',
+    ],
+    loader: () => import('./tools/panalyze.js'),
+  },
+  {
+    id:       'netinfo',
+    cat:      'recon',
+    exe:      'NETINFO.EXE',
+    name:     'Network Info',
+    desc:     'Geolocate any IP address and display full browser and system fingerprint.',
     art: [
       '  .---.  ',
       ' ( IP  ) ',
@@ -79,26 +112,11 @@ const APPS = [
     loader: () => import('./tools/netinfo.js'),
   },
   {
-    id:   'jwtdec',
-    exe:  'JWTDEC.EXE',
-    name: 'JWT Decoder',
-    desc: 'Decode & inspect\nJWT tokens',
-    art: [
-      'eyJ····',
-      '.······',
-      '.SflKx·',
-      '-------',
-      'HDR·PLD',
-      '  SIG  ',
-      '       ',
-    ],
-    loader: () => import('./tools/jwtdec.js'),
-  },
-  {
-    id:   'mailspy',
-    exe:  'MAILSPY.EXE',
-    name: 'Email Checker',
-    desc: 'Breach lookup &\ndata broker check',
+    id:       'mailspy',
+    cat:      'recon',
+    exe:      'MAILSPY.EXE',
+    name:     'Email Checker',
+    desc:     'Check an email address against known breach databases and data broker lists.',
     art: [
       ' _______ ',
       '|       |',
@@ -110,11 +128,14 @@ const APPS = [
     ],
     loader: () => import('./tools/mailspy.js'),
   },
+
+  // ── FIELD TOOLS ──
   {
-    id:   'penguide',
-    exe:  'PENGUIDE.EXE',
-    name: 'Pentest Guide',
-    desc: 'Interactive analyst\nchecklist + commands',
+    id:       'penguide',
+    cat:      'field',
+    exe:      'PENGUIDE.EXE',
+    name:     'Pentest Guide',
+    desc:     'Interactive penetration testing checklist with commands for every phase.',
     art: [
       '.-------.',
       '|>nmap  |',
@@ -127,10 +148,11 @@ const APPS = [
     loader: () => import('./tools/penguide.js'),
   },
   {
-    id:   'github',
-    exe:  'GITHUB.EXE',
-    name: 'GitHub Profile',
-    desc: 'boclaes102-eng\n// legendary repos',
+    id:       'github',
+    cat:      'field',
+    exe:      'GITHUB.EXE',
+    name:     'GitHub Profile',
+    desc:     'Classified intelligence dossier. Navigate to boclaes102-eng on GitHub.',
     art: [
       '  .---.  ',
       ' /o   o\\ ',
@@ -142,21 +164,41 @@ const APPS = [
     ],
     loader: () => import('./tools/github.js'),
   },
+
+  // ── A.I. SYSTEM ──
+  {
+    id:       'aichat',
+    cat:      'ai',
+    exe:      'ARIA.EXE',
+    name:     'ARIA Terminal',
+    desc:     'Chat with ARIA — Artificial Reasoning Intelligence Assistant. LLM-powered.',
+    art: [
+      ' _______ ',
+      '|  A I  |',
+      '| R I A |',
+      '|_______|',
+      '|> _ █  |',
+      '|       |',
+      ' NEURAL  ',
+    ],
+    loader: () => import('./tools/aichat.js'),
+  },
 ];
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
-let _el         = null;
-let _workspace  = null;
-let _taskbarApp = null;
-let _clockId    = null;
-let _onShut     = null;
-let _activeWin  = null;
-let _keyHandler = null;
+let _el          = null;
+let _workspace   = null;
+let _taskbarApp  = null;
+let _clockId     = null;
+let _onShut      = null;
+let _activeWin   = null;
+let _keyHandler  = null;
+let _activeCatId = CATEGORIES[0].id;
 
 // ── DOM helpers ───────────────────────────────────────────────────────────────
 
-function el(tag, cls='', text='') {
+function el(tag, cls = '', text = '') {
   const e = document.createElement(tag);
   if (cls)  e.className = cls;
   if (text) e.textContent = text;
@@ -165,14 +207,12 @@ function el(tag, cls='', text='') {
 
 function fmtClock() {
   const d = new Date();
-  const pad = n => String(n).padStart(2,'0');
+  const pad = n => String(n).padStart(2, '0');
   return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
 // ── Window manager ────────────────────────────────────────────────────────────
 
-// Animated close — slides the window down and out (reverse of the open slide-up).
-// onComplete is called after the animation finishes.
 function closeWindow(onComplete) {
   if (!_activeWin) { onComplete?.(); return; }
   const win = _activeWin;
@@ -187,8 +227,6 @@ function closeWindow(onComplete) {
   });
 }
 
-// Instant close — used when switching apps so the new window doesn't overlap
-// the outgoing slide-down animation.
 function closeWindowInstant() {
   if (!_activeWin) return;
   _activeWin.remove();
@@ -199,45 +237,35 @@ function closeWindowInstant() {
 async function openApp(app, iconEl) {
   sfx('pc-enter');
 
-  // Highlight selected icon
   _el.querySelectorAll('.pc-icon').forEach(i => i.classList.remove('selected'));
   iconEl.classList.add('selected');
 
-  // Close any open window instantly when switching apps — avoids the new window
-  // overlapping a still-playing slide-down animation from the previous one.
   closeWindowInstant();
 
-  // ─ Build window ─
-  const win = el('div','pc-window');
+  const win = el('div', 'pc-window');
   _activeWin = win;
 
-  // Title bar
-  const titlebar = el('div','pc-window-titlebar');
-  const title    = el('span','pc-window-title', `C:\\${app.exe}`);
-  const backBtn  = el('button','pc-window-back','[ CLOSE ]');
+  const titlebar = el('div', 'pc-window-titlebar');
+  const title    = el('span', 'pc-window-title', `C:\\${app.exe}`);
+  const backBtn  = el('button', 'pc-window-back', '[ CLOSE ]');
   titlebar.append(title, backBtn);
 
-  // Content area
-  const content = el('div','pc-window-content');
-
+  const content = el('div', 'pc-window-content');
   win.append(titlebar, content);
   _workspace.appendChild(win);
 
-  // Typing sound — delegated so it covers every input/textarea in every tool
   win.addEventListener('keydown', e => {
     if (!e.target.matches('input, textarea')) return;
     if (e.ctrlKey || e.altKey || e.metaKey) return;
     if (e.key.length === 1 || e.key === 'Backspace' || e.key === 'Delete') sfx('pc-type');
   });
 
-  // Taskbar entry
-  _taskbarApp = el('div','pc-taskbar-app', app.exe);
+  _taskbarApp = el('div', 'pc-taskbar-app', app.exe);
   _el.querySelector('.pc-taskbar').insertBefore(
     _taskbarApp,
-    _el.querySelector('.pc-taskbar-clock')
+    _el.querySelector('.pc-taskbar-clock'),
   );
 
-  // Close handlers
   backBtn.addEventListener('click', () => {
     sfx('pc-exit');
     closeWindow(() => {
@@ -245,70 +273,117 @@ async function openApp(app, iconEl) {
     });
   });
 
-  // Load and start tool
   try {
     const mod = await app.loader();
     mod.startTool(content);
   } catch (err) {
-    content.appendChild(Object.assign(el('div','pc-tool-danger'), {
+    content.appendChild(Object.assign(el('div', 'pc-tool-danger'), {
       textContent: `  ✗  Failed to load ${app.exe}: ${err.message}`,
     }));
   }
 }
 
-// ── Build DOM ─────────────────────────────────────────────────────────────────
+// ── Build icon panel ──────────────────────────────────────────────────────────
 
-function buildDOM() {
-  _el = el('div','pc-desktop');
+function buildIconPanel(catId, panelEl) {
+  panelEl.innerHTML = '';
 
-  // CRT effects
-  _el.appendChild(el('div','crt-scanlines'));
-  _el.appendChild(el('div','crt-vignette'));
+  const cat   = CATEGORIES.find(c => c.id === catId);
+  const apps  = APPS.filter(a => a.cat === catId);
 
-  // ─ Menu bar ─
-  const menubar = el('div','pc-menubar');
+  // Category heading inside the panel
+  const heading = el('div', 'pc-panel-heading');
+  const headTitle = el('span', 'pc-panel-heading-title', cat.label);
+  const headCount = el('span', 'pc-panel-heading-count', `${apps.length} PROGRAM${apps.length !== 1 ? 'S' : ''}`);
+  heading.append(headTitle, headCount);
+  panelEl.appendChild(heading);
 
-  const titleSpan = el('span','pc-menubar-title','■ SECUREOS  v1.0');
-  const sub       = el('span','pc-menubar-sub','// CYBERSECURITY TOOLKIT');
-  const blink     = el('span','crt-blink-cursor','▌');
-
-  const shutBtn   = el('button','pc-shutdown-btn','[ SHUTDOWN ]');
-  shutBtn.title   = 'Exit to 3D world (ESC)';
-
-  menubar.append(titleSpan, sub, blink, shutBtn);
-  _el.appendChild(menubar);
-
-  // ─ Workspace ─
-  _workspace = el('div','pc-workspace');
-
-  // Icon grid
-  const grid = el('div','pc-icon-grid');
-
-  APPS.forEach(app => {
-    const icon = el('div','pc-icon');
+  const grid = el('div', 'pc-icon-grid');
+  apps.forEach(app => {
+    const icon = el('div', 'pc-icon');
     icon.title = app.exe;
 
-    const art = el('div','pc-icon-art', app.art.join('\n'));
-    const lbl = el('div','pc-icon-label', app.exe);
-    const desc = el('div','pc-icon-desc', app.desc);
+    const art  = el('div', 'pc-icon-art', app.art.join('\n'));
+    const lbl  = el('div', 'pc-icon-label', app.exe);
+    const name = el('div', 'pc-icon-name', app.name);
+    const desc = el('div', 'pc-icon-desc', app.desc);
 
-    icon.append(art, lbl, desc);
-
+    icon.append(art, lbl, name, desc);
     icon.addEventListener('click', () => openApp(app, icon));
     icon.addEventListener('dblclick', () => openApp(app, icon));
     grid.appendChild(icon);
   });
 
-  _workspace.appendChild(grid);
+  panelEl.appendChild(grid);
+}
+
+// ── Build DOM ─────────────────────────────────────────────────────────────────
+
+function buildDOM() {
+  _el = el('div', 'pc-desktop');
+
+  _el.appendChild(el('div', 'crt-scanlines'));
+  _el.appendChild(el('div', 'crt-vignette'));
+
+  // ─ Menu bar ─
+  const menubar   = el('div', 'pc-menubar');
+  const titleSpan = el('span', 'pc-menubar-title', '■ SECUREOS  v1.0');
+  const sub       = el('span', 'pc-menubar-sub', '// CYBERSECURITY TOOLKIT');
+  const blink     = el('span', 'crt-blink-cursor', '▌');
+  const shutBtn   = el('button', 'pc-shutdown-btn', '[ SHUTDOWN ]');
+  shutBtn.title   = 'Exit to 3D world (ESC)';
+  menubar.append(titleSpan, sub, blink, shutBtn);
+  _el.appendChild(menubar);
+
+  // ─ Workspace: sidebar + panel ─
+  _workspace = el('div', 'pc-workspace');
+
+  // Sidebar
+  const sidebar = el('div', 'pc-sidebar');
+
+  const sideHeader = el('div', 'pc-sidebar-header', 'MODULES');
+  sidebar.appendChild(sideHeader);
+
+  const catItems = [];
+  CATEGORIES.forEach(cat => {
+    const appsInCat = APPS.filter(a => a.cat === cat.id);
+    const item = el('div', 'pc-sidebar-item');
+    if (cat.id === _activeCatId) item.classList.add('active');
+
+    const itemLabel = el('span', 'pc-sidebar-item-label', cat.label);
+    const itemCount = el('span', 'pc-sidebar-item-count', `[${appsInCat.length}]`);
+    item.append(itemLabel, itemCount);
+
+    item.addEventListener('click', () => {
+      if (_activeCatId === cat.id) return;
+      _activeCatId = cat.id;
+      catItems.forEach(ci => ci.classList.remove('active'));
+      item.classList.add('active');
+      buildIconPanel(cat.id, iconPanel);
+    });
+
+    catItems.push(item);
+    sidebar.appendChild(item);
+  });
+
+  // Sidebar footer: total count
+  const sideFooter = el('div', 'pc-sidebar-footer',
+    `${APPS.length} PROGRAMS TOTAL`);
+  sidebar.appendChild(sideFooter);
+
+  // Icon panel
+  const iconPanel = el('div', 'pc-icon-panel');
+  buildIconPanel(_activeCatId, iconPanel);
+
+  _workspace.append(sidebar, iconPanel);
   _el.appendChild(_workspace);
 
   // ─ Taskbar ─
-  const taskbar  = el('div','pc-taskbar');
-  const sysLabel = el('span','pc-tool-dim','SECUREOS');
-  const clock    = el('span','pc-taskbar-clock', fmtClock());
+  const taskbar  = el('div', 'pc-taskbar');
+  const sysLabel = el('span', 'pc-tool-dim', 'SECUREOS');
+  const clock    = el('span', 'pc-taskbar-clock', fmtClock());
 
   _clockId = setInterval(() => { clock.textContent = fmtClock(); }, 1000);
-
   taskbar.append(sysLabel, clock);
   _el.appendChild(taskbar);
 
@@ -344,7 +419,7 @@ export function showDesktop(onShutdown) {
   const { gsap } = window;
   gsap.fromTo(_el,
     { scaleY: 0.005, opacity: 1 },
-    { scaleY: 1, duration: 0.45, ease: 'power2.out' }
+    { scaleY: 1, duration: 0.45, ease: 'power2.out' },
   );
 }
 

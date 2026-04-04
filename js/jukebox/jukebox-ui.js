@@ -531,8 +531,9 @@ function _build(currentTheme) {
 
 // ── Public API ────────────────────────────────────────────────────────────────
 export function showJukeboxUI(onEject) {
-  _onEject    = onEject;
-  _activeSlot = -1;
+  _onEject = onEject;
+  // Don't reset _activeSlot here — it persists across open/close so the
+  // correct custom-track slot is remembered within the same session.
   sfx('arcade-enter');
 
   const current = getMusicTheme();
@@ -550,16 +551,26 @@ export function showJukeboxUI(onEject) {
 
     // Restore active theme
     if (savedTheme === 'custom') {
-      const firstFilled = savedUrls.findIndex(u => u);
-      if (firstFilled !== -1) {
-        _activeSlot = firstFilled;
-        setCustomTrackUrl(savedUrls[firstFilled]);
-        if (getMusicTheme() !== 'custom') setMusicTheme('custom');
+      if (_activeSlot !== -1 && savedUrls[_activeSlot]) {
+        // Session already remembers the correct slot — just update the vis panel label
         _updateVisPanel({
-          name:   _titleFromUrl(savedUrls[firstFilled]),
-          artist: `SLOT ${firstFilled + 1} OF ${NUM_SLOTS}`,
+          name:   _titleFromUrl(savedUrls[_activeSlot]),
+          artist: `SLOT ${_activeSlot + 1} OF ${NUM_SLOTS}`,
           color:  '#00ffcc',
         });
+      } else {
+        // First open this session: pick the first filled slot from the DB
+        const firstFilled = savedUrls.findIndex(u => u);
+        if (firstFilled !== -1) {
+          _activeSlot = firstFilled;
+          setCustomTrackUrl(savedUrls[firstFilled]);
+          if (getMusicTheme() !== 'custom') setMusicTheme('custom');
+          _updateVisPanel({
+            name:   _titleFromUrl(savedUrls[firstFilled]),
+            artist: `SLOT ${firstFilled + 1} OF ${NUM_SLOTS}`,
+            color:  '#00ffcc',
+          });
+        }
       }
     } else if (savedTheme && savedTheme !== getMusicTheme()) {
       // Treat legacy 'synthwave' saves as 'space' (theme was renamed)

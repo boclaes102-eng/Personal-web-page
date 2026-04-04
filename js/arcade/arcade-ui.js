@@ -10,7 +10,8 @@
 import { startPong }     from './games/pong.js';
 import { startGalaga }   from './games/galaga.js';
 import { startBreakout } from './games/breakout.js';
-import { submitScore, getLeaderboard } from './db.js';
+import { submitScore, getLeaderboard,
+         subscribeLeaderboard, unsubscribeLeaderboard } from './db.js';
 import { sfx } from '../audio/audio-manager.js';
 import { getCurrentUser } from '../auth/auth.js';
 
@@ -41,25 +42,36 @@ const GAMES = [
   },
 ];
 
+// Menu items = games + a direct-leaderboard shortcut at the bottom
+const MENU_ITEMS = [
+  ...GAMES,
+  {
+    id:            '__leaderboard__',
+    label:         'LEADERBOARD',
+    desc:          'HALL OF FAME  ·  LIVE SCORES  ·  ALL GAMES',
+    color:         '#aaaaff',
+    isLeaderboard: true,
+  },
+];
+
 // ── Module state ──────────────────────────────────────────────────────────────
-let _onClose       = null;   // called when user exits the overlay
-let _stopGame      = null;   // cleanup fn returned by the active game
-let _currentGameId = null;
-let _lastScore     = 0;
+let _onClose        = null;   // called when user exits the overlay
+let _stopGame       = null;   // cleanup fn returned by the active game
+let _currentGameId  = null;
+let _lbGameId       = null;   // game currently shown in leaderboard
 
 // ── DOM helpers ───────────────────────────────────────────────────────────────
-const $  = id => document.getElementById(id);
-const el = id => $(id);
+const $ = id => document.getElementById(id);
 
 // ── Show / hide overlay with CRT power animation ─────────────────────────────
 export function showArcade(onClose) {
   sfx('arcade-enter');
   _onClose = onClose;
-  const overlay = el('arcade-overlay');
+  const overlay = $('arcade-overlay');
   overlay.style.display = 'flex';
 
   // Wire up the top-bar exit button (once — clone-replace to clear old listeners)
-  const exitBtn    = el('arc-exit-btn');
+  const exitBtn    = $('arc-exit-btn');
   const newExitBtn = exitBtn.cloneNode(true);
   exitBtn.parentNode.replaceChild(newExitBtn, exitBtn);
   newExitBtn.addEventListener('click', () => hideArcade(_onClose));
@@ -75,7 +87,9 @@ export function showArcade(onClose) {
 export function hideArcade(callback) {
   sfx('arcade-exit');
   _stopCurrentGame();
-  const overlay = el('arcade-overlay');
+  unsubscribeLeaderboard();
+  _setLiveBadge(false);
+  const overlay = $('arcade-overlay');
   // CRT power-off: shrink to a horizontal line then fade
   gsap.to(overlay, {
     scaleY: 0.005,
@@ -92,8 +106,44 @@ export function hideArcade(callback) {
 // ── Screen management ─────────────────────────────────────────────────────────
 function _showScreen(id) {
   ['arc-screen-menu', 'arc-screen-game', 'arc-screen-gameover', 'arc-screen-lb']
-    .forEach(s => el(s).style.display = 'none');
-  el(id).style.display = 'flex';
+    .forEach(s => $(s).style.display = 'none');
+  $(id).style.display = 'flex';
+}
+
+// ── Animated screen transitions ───────────────────────────────────────────────
+
+function _transition(fn) {
+  const content = document.querySelector('.arc-content');
+  gsap.timeline()
+    .to(content,  { opacity: 0, duration: 0.15, ease: 'power2.in' })
+    .call(fn)
+    .to(content,  { opacity: 1, duration: 0.25, ease: 'power2.out' });
+}
+
+// Back to menu from leaderboard or mid-game ESC.
+function _goToMenu() {
+  sfx('arcade-exit');
+  unsubscribeLeaderboard();
+  _setLiveBadge(false);
+  _transition(() => _showMenu());
+}
+
+// Game over → leaderboard transition.
+function _goToLeaderboard(gameDef) {
+  sfx('arcade-menu-select');
+  _transition(() => {
+    _showScreen('arc-screen-lb');
+    _setupLeaderboardScreen(gameDef.id, gameDef.color, false);
+    $('arc-lb-body').innerHTML = '<div class="arc-lb-loading">SAVING SCORE…</div>';
+  });
+}
+
+// Leaderboard / menu → launch game transition.
+function _goToGame(gameDef) {
+  sfx('arcade-menu-select');
+  unsubscribeLeaderboard();
+  _setLiveBadge(false);
+  _transition(() => _launchGame(gameDef));
 }
 
 // ── Menu screen ───────────────────────────────────────────────────────────────
@@ -101,6 +151,8 @@ let _menuCursor = 0;
 
 function _showMenu() {
   _stopCurrentGame();
+  unsubscribeLeaderboard();
+  _setLiveBadge(false);
   _menuCursor = 0;
   _renderMenu();
   _showScreen('arc-screen-menu');
@@ -108,19 +160,27 @@ function _showMenu() {
 }
 
 function _renderMenu() {
-  const list = el('arc-menu-list');
+  const list = $('arc-menu-list');
   list.innerHTML = '';
-  GAMES.forEach((g, i) => {
-    const item = document.createElement('div');
-    item.className = 'arc-menu-item' + (i === _menuCursor ? ' selected' : '');
-    item.style.setProperty('--game-color', g.color);
-    item.innerHTML = `
+
+  MENU_ITEMS.forEach((item, i) => {
+    // Separator line before the leaderboard entry
+    if (item.isLeaderboard) {
+      const sep = document.createElement('div');
+      sep.className = 'arc-menu-separator';
+      list.appendChild(sep);
+    }
+
+    const div = document.createElement('div');
+    div.className = 'arc-menu-item' + (i === _menuCursor ? ' selected' : '');
+    div.style.setProperty('--game-color', item.color);
+    div.innerHTML = `
       <span class="arc-cursor">&gt;</span>
-      <span class="arc-game-label">${g.label}</span>
-      <span class="arc-game-desc">${g.desc}</span>
+      <span class="arc-game-label">${item.label}</span>
+      <span class="arc-game-desc">${item.desc}</span>
     `;
-    item.addEventListener('click', () => { _menuCursor = i; _launchGame(g); });
-    list.appendChild(item);
+    div.addEventListener('click', () => { _menuCursor = i; _selectMenuItem(item); });
+    list.appendChild(div);
   });
 }
 
@@ -132,24 +192,22 @@ function _attachMenuKeys() {
     if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
       e.stopImmediatePropagation();
       sfx('arcade-menu-move');
-      _menuCursor = (_menuCursor - 1 + GAMES.length) % GAMES.length;
+      _menuCursor = (_menuCursor - 1 + MENU_ITEMS.length) % MENU_ITEMS.length;
       _renderMenu();
     } else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
       e.stopImmediatePropagation();
       sfx('arcade-menu-move');
-      _menuCursor = (_menuCursor + 1) % GAMES.length;
+      _menuCursor = (_menuCursor + 1) % MENU_ITEMS.length;
       _renderMenu();
     } else if (e.key === 'Enter' || e.key === ' ') {
       e.stopImmediatePropagation();
-      _launchGame(GAMES[_menuCursor]);
+      _selectMenuItem(MENU_ITEMS[_menuCursor]);
     } else if (e.key === 'Escape') {
-      // Capture + stopImmediatePropagation prevents input.js from also calling zoomOut()
       e.stopImmediatePropagation();
-      _detachMenuKeys();  // prevent re-entry if user spams ESC during the exit animation
+      _detachMenuKeys();
       hideArcade(_onClose);
     }
   };
-  // Use capture phase so this fires before input.js's bubble-phase listener
   window.addEventListener('keydown', _menuKeyListener, true);
 }
 
@@ -160,35 +218,39 @@ function _detachMenuKeys() {
   }
 }
 
+// ── Menu item selection ───────────────────────────────────────────────────────
+function _selectMenuItem(item) {
+  _detachMenuKeys();
+  if (item.isLeaderboard) {
+    sfx('arcade-menu-select');
+    _transition(() => _showLeaderboard('pong', null));
+  } else {
+    _goToGame(item);
+  }
+}
+
 // ── Game launch ───────────────────────────────────────────────────────────────
 function _launchGame(gameDef) {
-  sfx('arcade-menu-select');
-  _detachMenuKeys();
   _currentGameId = gameDef.id;
 
   _showScreen('arc-screen-game');
-  const gameCanvas = el('arc-canvas');
+  const gameCanvas = $('arc-canvas');
 
-  // Resize canvas to available container dimensions
-  const container = el('arc-screen-game');
+  const container = $('arc-screen-game');
   gameCanvas.width  = container.clientWidth  || 800;
   gameCanvas.height = container.clientHeight || 500;
 
-  // Start the game; it calls onGameOver(score) when finished
   _stopGame = gameDef.start(gameCanvas, score => {
-    _lastScore = score;
     _stopCurrentGame();
     _autoSubmitAndShowLeaderboard(gameDef, score);
   });
 
-  // ESC returns to menu (not out of arcade).
-  // Capture phase + stopImmediatePropagation prevents input.js from seeing ESC.
   const escListener = e => {
     if (e.key === 'Escape') {
       e.stopImmediatePropagation();
       window.removeEventListener('keydown', escListener, true);
       _stopCurrentGame();
-      _showMenu();
+      _goToMenu();
     }
   };
   window.addEventListener('keydown', escListener, true);
@@ -203,76 +265,112 @@ async function _autoSubmitAndShowLeaderboard(gameDef, score) {
   const user     = getCurrentUser();
   const username = user?.user_metadata?.username ?? user?.email ?? null;
 
-  // Switch to leaderboard screen straight away so the transition feels instant
-  _showScreen('arc-screen-lb');
-  el('arc-lb-title').textContent = `${gameDef.label} — HALL OF FAME`;
-  el('arc-lb-body').innerHTML    = '<div class="arc-lb-loading">SAVING SCORE…</div>';
-  el('arc-lb-color').style.setProperty('--game-color', gameDef.color);
+  // Animated transition into the leaderboard screen
+  _goToLeaderboard(gameDef);
 
-  document.querySelectorAll('.arc-lb-tab').forEach(t => {
-    t.classList.toggle('active', t.dataset.game === gameDef.id);
-    t.onclick = () => _showLeaderboard(t.dataset.game, null);
-  });
-  el('arc-lb-back').onclick  = () => _showMenu();
-  el('arc-lb-again').onclick = () => _launchGame(gameDef);
+  // Give the fade-out time to complete before doing async work
+  await new Promise(r => setTimeout(r, 160));
 
-  // Submit silently — best-score logic is already handled inside db.js
   if (username) {
     try {
       await submitScore(username, gameDef.id, score);
     } catch {
-      el('arc-lb-body').innerHTML =
+      $('arc-lb-body').innerHTML =
         '<div class="arc-lb-error">SCORE SAVE FAILED<br><small>Please try again later.</small></div>';
       await new Promise(r => setTimeout(r, 2000));
     }
   }
 
-  // Fetch and render the leaderboard (reflects the just-saved score)
   try {
     const rows = await getLeaderboard(gameDef.id, 10);
     _renderLeaderboard(rows, username, gameDef.color);
   } catch {
-    el('arc-lb-body').innerHTML =
+    $('arc-lb-body').innerHTML =
       '<div class="arc-lb-error">COULD NOT LOAD SCORES<br><small>Please try again later.</small></div>';
   }
+
+  _startRealtimeForLeaderboard(username);
 }
 
 // ── Leaderboard screen ────────────────────────────────────────────────────────
 async function _showLeaderboard(gameId, playerName) {
   _showScreen('arc-screen-lb');
   const gameDef = GAMES.find(g => g.id === gameId);
-
-  el('arc-lb-title').textContent = `${gameDef?.label ?? gameId.toUpperCase()} — HALL OF FAME`;
-  el('arc-lb-body').innerHTML = '<div class="arc-lb-loading">LOADING…</div>';
-
-  el('arc-lb-color').style.setProperty('--game-color', gameDef?.color ?? '#00ffcc');
-
-  // Tab switcher active state
-  document.querySelectorAll('.arc-lb-tab').forEach(t => {
-    t.classList.toggle('active', t.dataset.game === gameId);
-    t.onclick = () => _showLeaderboard(t.dataset.game, null);
-  });
-
-  // Back and play-again buttons
-  const backBtn  = el('arc-lb-back');
-  const againBtn = el('arc-lb-again');
-  backBtn.onclick  = () => _showMenu();
-  againBtn.onclick = () => {
-    const def = GAMES.find(g => g.id === _currentGameId || g.id === gameId);
-    if (def) _launchGame(def);
-  };
+  _setupLeaderboardScreen(gameId, gameDef?.color ?? '#aaaaff', true);
+  $('arc-lb-body').innerHTML = '<div class="arc-lb-loading">LOADING…</div>';
 
   try {
     const rows = await getLeaderboard(gameId, 10);
-    _renderLeaderboard(rows, playerName, gameDef?.color ?? '#00ffcc');
+    _renderLeaderboard(rows, playerName, gameDef?.color ?? '#aaaaff');
   } catch {
-    el('arc-lb-body').innerHTML =
+    $('arc-lb-body').innerHTML =
       '<div class="arc-lb-error">COULD NOT LOAD SCORES<br><small>Please try again later.</small></div>';
   }
+
+  _startRealtimeForLeaderboard(playerName);
 }
 
+// Shared setup for the leaderboard screen (tabs, title, buttons).
+// fromMenu=true  → browsing all games via the menu shortcut: show tabs, hide play again
+// fromMenu=false → just finished a game: hide tabs, show play again for that game
+function _setupLeaderboardScreen(gameId, color, fromMenu) {
+  _lbGameId = gameId;
+
+  const gameDef = GAMES.find(g => g.id === gameId);
+  $('arc-lb-title').textContent = `${gameDef?.label ?? gameId.toUpperCase()} — HALL OF FAME`;
+  $('arc-lb-color').style.setProperty('--game-color', color);
+
+  // Tabs — only visible when browsing from the menu
+  const tabsEl = document.querySelector('.arc-lb-tabs');
+  if (tabsEl) tabsEl.style.display = fromMenu ? 'flex' : 'none';
+
+  document.querySelectorAll('.arc-lb-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.game === gameId);
+    t.onclick = () => {
+      unsubscribeLeaderboard();
+      _setLiveBadge(false);
+      _transition(() => _showLeaderboard(t.dataset.game, null));
+    };
+  });
+
+  $('arc-lb-back').onclick = () => _goToMenu();
+
+  // "PLAY AGAIN" — only visible after finishing a game
+  const againBtn = $('arc-lb-again');
+  againBtn.style.display = fromMenu ? 'none' : '';
+  againBtn.onclick = () => {
+    const def = GAMES.find(g => g.id === _currentGameId);
+    if (def) _goToGame(def);
+  };
+}
+
+// ── Realtime subscription management ─────────────────────────────────────────
+function _startRealtimeForLeaderboard(highlightName) {
+  subscribeLeaderboard(
+    // Called on any INSERT or UPDATE to arcade_scores
+    async () => {
+      if (_lbGameId) {
+        try {
+          const gameDef = GAMES.find(g => g.id === _lbGameId);
+          const rows    = await getLeaderboard(_lbGameId, 10);
+          _renderLeaderboard(rows, highlightName, gameDef?.color ?? '#aaaaff');
+        } catch { /* silent — don't disrupt the UI on a failed refresh */ }
+      }
+    },
+    // Called when WebSocket status changes
+    status => _setLiveBadge(status === 'SUBSCRIBED'),
+  );
+}
+
+function _setLiveBadge(active) {
+  const badge = $('arc-lb-live');
+  if (!badge) return;
+  badge.style.display = active ? 'inline-flex' : 'none';
+}
+
+// ── Render rows ───────────────────────────────────────────────────────────────
 function _renderLeaderboard(rows, highlightName, color) {
-  const tbody = el('arc-lb-body');
+  const tbody = $('arc-lb-body');
   if (!rows.length) {
     tbody.innerHTML = '<div class="arc-lb-empty">NO SCORES YET — BE THE FIRST!</div>';
     return;

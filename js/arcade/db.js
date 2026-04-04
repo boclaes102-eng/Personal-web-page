@@ -143,3 +143,41 @@ export async function getLeaderboard(game, limit = 10) {
   }
   return res.json();
 }
+
+// ── Realtime leaderboard subscription ────────────────────────────────────────
+// Uses the Supabase JS SDK (loaded from CDN) for WebSocket Postgres Changes.
+// NOTE: You must enable Realtime on the arcade_scores table in the Supabase
+// dashboard → Database → Replication → enable for arcade_scores.
+
+let _realtimeClient  = null;
+let _realtimeChannel = null;
+
+/**
+ * Subscribe to live inserts/updates on arcade_scores.
+ * onUpdate() is called whenever any score row changes.
+ * onStatusChange(status) is called when the WebSocket connects ('SUBSCRIBED') or drops.
+ */
+export function subscribeLeaderboard(onUpdate, onStatusChange) {
+  unsubscribeLeaderboard();
+
+  if (!window.supabase?.createClient) return;   // SDK not loaded yet
+
+  _realtimeClient  = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  _realtimeChannel = _realtimeClient
+    .channel('arcade-leaderboard')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'arcade_scores' },
+      onUpdate,
+    )
+    .subscribe(status => onStatusChange?.(status));
+}
+
+/** Tear down the active Realtime channel. */
+export function unsubscribeLeaderboard() {
+  if (_realtimeChannel) {
+    _realtimeChannel.unsubscribe();
+    _realtimeChannel = null;
+    _realtimeClient  = null;
+  }
+}

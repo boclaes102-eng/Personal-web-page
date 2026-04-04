@@ -176,7 +176,8 @@ export function zoomOut() {
 function _doZoomOut() {
   currentCelestialTarget = null;
   sfx('zoom-out');
-  unduckMusic();
+  // Jukebox never ducks the music (it IS the music UI), so don't unduck on exit
+  if (_currentZoomType !== 'jukebox') unduckMusic();
   const restoredTarget = new THREE.Vector3(
      Math.sin(cam.savedYaw)  * Math.cos(cam.savedPitch),
      Math.sin(cam.savedPitch),
