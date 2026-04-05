@@ -66,9 +66,10 @@ function _connect(userId) {
     config: { presence: { key: userId } },
   });
 
-  _channel.on('presence', { event: 'sync' }, () => {
-    _render(_channel.presenceState());
-  });
+  _channel
+    .on('presence', { event: 'sync' },  () => _render(_channel.presenceState()))
+    .on('presence', { event: 'join' },  () => _render(_channel.presenceState()))
+    .on('presence', { event: 'leave' }, () => _render(_channel.presenceState()));
 
   _channel.subscribe(async status => {
     if (status === 'SUBSCRIBED') {
