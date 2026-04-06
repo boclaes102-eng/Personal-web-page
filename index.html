@@ -35,7 +35,7 @@
     default-src 'self';
     script-src  'self' https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com 'unsafe-inline';
     connect-src 'self' https://*.supabase.co wss://*.supabase.co;
-    style-src   'self';
+    style-src   'self' 'unsafe-inline';
     img-src     'self' data: blob:;
     media-src   'self' https://*.supabase.co blob:;
     object-src  'none';
