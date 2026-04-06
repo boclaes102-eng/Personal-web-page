@@ -14,8 +14,9 @@ yarn-error.log*
 .env.local
 .env.*.local
 
-# Supabase credentials — never commit the real file
-js/config.js
+# config.js only contains the Supabase URL and anon key — both are intentionally
+# public (the anon key is designed for browser use; security comes from RLS policies).
+# The Groq key and service_role key are never stored here — they live in Supabase secrets.
 
 # OS
 .DS_Store
