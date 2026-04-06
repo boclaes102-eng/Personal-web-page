@@ -213,11 +213,13 @@ export function buildPhoneBooth(proj) {
   group.add(ball);
 
   // ─ Sign panel (inside booth, facing front) ─
+  // Centered at y=0 so it stays within the middle glass section (±H/6 rails).
+  // Pulled back to z = D/2 - FT - 0.12 so corner posts don't clip it at side angles.
   const signMesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.65, 0.82),
+    new THREE.PlaneGeometry(0.60, 0.72),
     new THREE.MeshBasicMaterial({ map: makeSignTexture() })
   );
-  signMesh.position.set(0, 0.15, D / 2 - FT - 0.01);
+  signMesh.position.set(0, 0, D / 2 - FT - 0.12);
   group.add(signMesh);
 
   // ─ Phone handset (inside) ─

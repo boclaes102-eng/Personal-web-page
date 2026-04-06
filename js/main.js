@@ -46,8 +46,10 @@ function animate(nowMs) {
 
 // ── Start 3D world (called after successful auth) ─────────────────────────────
 function startWorld(user) {
-  // Show loading screen (was hidden before auth)
   const loading = document.getElementById('loading');
+  // Reset label in case we were showing "CONNECTING..." during session check
+  const label = loading.querySelector('.loading-label');
+  if (label) label.textContent = 'LOADING ENVIRONMENT';
   loading.style.display = 'flex';
 
   // Show username + sign-out in the 3D world header
@@ -173,12 +175,25 @@ async function bootstrap() {
     return;
   }
 
-  // 2. Try to restore a saved session (refreshes token if near expiry)
+  // 2. Try to restore a saved session (refreshes token if near expiry).
+  //    Show a "CONNECTING..." screen only if it takes more than 350 ms —
+  //    fast auto-logins skip it entirely, first-timers see it briefly.
+  const _loadEl    = document.getElementById('loading');
+  const _loadLabel = _loadEl.querySelector('.loading-label');
+  let   _connecting = false;
+  const _connectTimer = setTimeout(() => {
+    _connecting = true;
+    if (_loadLabel) _loadLabel.textContent = 'CONNECTING...';
+    _loadEl.style.display = 'flex';
+  }, 350);
+
   const user = await checkSession();
+  clearTimeout(_connectTimer);
 
   if (user) {
-    startWorld(user);
+    startWorld(user);    // startWorld resets label and animates the bar
   } else {
+    if (_connecting) _loadEl.style.display = 'none';  // hide before showing auth overlay
     showAuthOverlay(startWorld);
   }
 }

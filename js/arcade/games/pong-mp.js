@@ -41,7 +41,8 @@ export function startPongMP(canvas, isHost, channel, onGameOver, onOpponentLeft)
   let countVal     = 3;
   let nextServeDir = 1;
   let rafId, tickId;
-  let _done = false;   // true once game ends naturally
+  let _done = false;          // true once game ends naturally
+  let _pendingSounds = [];    // sounds queued by host physics, flushed each broadcast
 
   // Guest-side interpolation targets — lerped towards each frame
   let _tBx = W / 2, _tBy = H / 2;
@@ -66,6 +67,8 @@ export function startPongMP(canvas, isHost, channel, onGameOver, onOpponentLeft)
     if (p.gs  !== undefined) gameState    = p.gs;
     if (p.cv  !== undefined) countVal     = p.cv;
     if (p.nsd !== undefined) nextServeDir = p.nsd;
+    // Mirror sounds so the guest hears the same effects as the host
+    if (p.sounds) p.sounds.forEach(s => sfx(s));
   });
 
   channel.on('broadcast', { event: 'guest_paddle' }, ({ payload: p }) => {
@@ -186,15 +189,15 @@ export function startPongMP(canvas, isHost, channel, onGameOver, onOpponentLeft)
 
     bx += vx; by += vy;
 
-    if (by - BALL_R < 0) { by = BALL_R;      vy =  Math.abs(vy); sfx('pong-wall'); }
-    if (by + BALL_R > H) { by = H - BALL_R;  vy = -Math.abs(vy); sfx('pong-wall'); }
+    if (by - BALL_R < 0) { by = BALL_R;      vy =  Math.abs(vy); sfx('pong-wall');   _pendingSounds.push('pong-wall'); }
+    if (by + BALL_R > H) { by = H - BALL_R;  vy = -Math.abs(vy); sfx('pong-wall');   _pendingSounds.push('pong-wall'); }
 
     if (vx < 0 && bx - BALL_R <= p1x + PAD_W && bx + BALL_R >= p1x
         && by >= p1y && by <= p1y + PAD_H) {
       bx = p1x + PAD_W + BALL_R;
       vx = Math.abs(vx) * 1.06;
       vy = ((by - (p1y + PAD_H / 2)) / (PAD_H / 2)) * H * 0.014 * S;
-      sfx('pong-paddle');
+      sfx('pong-paddle'); _pendingSounds.push('pong-paddle');
     }
 
     if (vx > 0 && bx + BALL_R >= p2x && bx - BALL_R <= p2x + PAD_W
@@ -202,14 +205,14 @@ export function startPongMP(canvas, isHost, channel, onGameOver, onOpponentLeft)
       bx = p2x - BALL_R;
       vx = -Math.abs(vx) * 1.06;
       vy = ((by - (p2y + PAD_H / 2)) / (PAD_H / 2)) * H * 0.014 * S;
-      sfx('pong-paddle');
+      sfx('pong-paddle'); _pendingSounds.push('pong-paddle');
     }
 
     const spd = Math.hypot(vx, vy);
     if (spd > BALL_MAX) { vx = (vx / spd) * BALL_MAX; vy = (vy / spd) * BALL_MAX; }
 
-    if (bx < 0) { p2Score++; sfx('pong-score'); _onPoint( 1); }
-    if (bx > W) { p1Score++; sfx('pong-score'); _onPoint(-1); }
+    if (bx < 0) { p2Score++; sfx('pong-score'); _pendingSounds.push('pong-score'); _onPoint( 1); }
+    if (bx > W) { p1Score++; sfx('pong-score'); _pendingSounds.push('pong-score'); _onPoint(-1); }
   }
 
   // ── Guest update — lerp all received positions, handle own paddle ────────────
@@ -279,11 +282,13 @@ export function startPongMP(canvas, isHost, channel, onGameOver, onOpponentLeft)
 
   function _broadcastState() {
     if (!isHost) return;
+    const sounds = _pendingSounds.splice(0); // flush — never accumulate across broadcasts
     channel.send({ type: 'broadcast', event: 'game_state', payload: {
       bx: bx / W, by: by / H, vx: vx / W, vy: vy / H,
       p1y: p1y / H, p2y: p2y / H,
       p1Score, p2Score,
       gs: gameState, cv: countVal, nsd: nextServeDir,
+      sounds,
     }});
   }
 
