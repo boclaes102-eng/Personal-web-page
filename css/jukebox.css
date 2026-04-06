@@ -372,3 +372,70 @@
   letter-spacing: 1.2px;
   flex-shrink: 0;
 }
+
+/* ── Mobile responsive ───────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  /* Stack: compact controls bar on top, full-width tracklist below */
+  .jk-body { flex-direction: column; }
+
+  /* Topbar — hide subtitle, larger eject button */
+  .jk-logo-sub { display: none; }
+  .jk-logo     { font-size: 15px; }
+  .jk-eject-btn { min-height: 38px; padding: 6px 14px; }
+
+  /* Visualizer — collapse into a compact 2-column controls grid */
+  .jk-visualizer {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+    padding: 10px 14px;
+    border-left: none;
+    border-bottom: 1px solid rgba(0, 255, 204, 0.22);
+    gap: 0 16px;
+    order: -1;
+  }
+  /* Hide spectrum canvas and label on mobile — not useful on small screens */
+  .jk-vis-canvas,
+  .jk-vis-title,
+  .jk-vis-label,
+  .jk-vis-sublabel { display: none; }
+
+  /* Volume + seek — full width of their grid cell, top-aligned */
+  .jk-vol-wrap,
+  .jk-seek-wrap {
+    width: 100%;
+    padding-top: 0;
+    border-top: none;
+    align-items: flex-start;
+  }
+
+  /* Tracklist — full width, tighter padding */
+  .jk-tracklist { padding: 10px 12px; gap: 8px; }
+
+  /* Track rows — stack info + buttons vertically */
+  .jk-track { padding: 12px 12px; gap: 10px; flex-wrap: wrap; }
+  .jk-track-name   { font-size: 13px; }
+  .jk-track-desc   { display: none; }
+  .jk-track-num    { font-size: 16px; min-width: 22px; }
+
+  /* Custom slot buttons — horizontal row instead of vertical column */
+  .jk-custom-btns {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    width: 100%;
+    gap: 6px;
+  }
+  .jk-track-action { font-size: 11px; }
+
+  /* Larger tap targets for all buttons */
+  .jk-upload-btn {
+    padding: 7px 12px;
+    font-size: 10px;
+    min-height: 34px;
+  }
+
+  /* Status bar — shorter text */
+  .jk-status-bar { font-size: 8px; padding: 5px 12px; }
+}

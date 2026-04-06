@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * camera.js
  * Logical camera state (yaw/pitch/pos) and all zoom transitions.
@@ -17,6 +18,7 @@ import { showPhoneUI, hidePhoneUI }            from '../phonebooth/phone-ui.js';
 import { showJukeboxUI, hideJukeboxUI }        from '../jukebox/jukebox-ui.js';
 import { sfx, duckMusic, unduckMusic }         from '../audio/audio-manager.js';
 import { setPresenceRoom }                     from '../presence/presence.js';
+import { trackRoom }                           from '../analytics/tracker.js';
 
 const { gsap } = window;
 
@@ -32,8 +34,9 @@ export const cam = {
   mode:   'freelook', // 'freelook' | 'transitioning' | 'zoomed'
 };
 
+const _camDirScratch = new THREE.Vector3();
 export function camDir() {
-  return new THREE.Vector3(
+  return _camDirScratch.set(
      Math.sin(cam.yaw)  * Math.cos(cam.pitch),
      Math.sin(cam.pitch),
     -Math.cos(cam.yaw)  * Math.cos(cam.pitch)
@@ -82,25 +85,30 @@ export function zoomIn(group) {
         _currentZoomType = 'computer';
         duckMusic();
         setPresenceRoom('computer');
+        trackRoom('computer');
         showDesktop(() => zoomOut());
       } else if (isTelevision) {
         _currentZoomType = 'television';
         duckMusic();
         setPresenceRoom('television');
+        trackRoom('television');
         showTV(() => zoomOut());
       } else if (isArcade) {
         _currentZoomType = 'arcade';
         duckMusic();
         setPresenceRoom('arcade');
+        trackRoom('arcade');
         showArcade(() => zoomOut());
       } else if (isPhoneBooth) {
         _currentZoomType = 'phonebooth';
         duckMusic();
         setPresenceRoom('phonebooth');
+        trackRoom('phonebooth');
         showPhoneUI(() => zoomOut());
       } else if (isJukebox) {
         _currentZoomType = 'jukebox';
         setPresenceRoom('jukebox');
+        trackRoom('jukebox');
         // Don't duck music — the jukebox IS the music UI
         showJukeboxUI(() => zoomOut());
       } else {

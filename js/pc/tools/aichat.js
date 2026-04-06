@@ -1,15 +1,18 @@
 /**
  * tools/aichat.js
  * ARIA — AI terminal chat powered by Groq (Llama 3.1 8B Instant).
- * Streams the response from Groq, then types it out character-by-character
- * with pc-type sound effects — same style as github.js.
+ * Streams the response from Groq via the groq-proxy Supabase Edge Function,
+ * then types it out character-by-character with pc-type sound effects.
  *
- * Requires: GROQ_API_KEY in js/config.js
+ * The Groq API key never reaches the browser — it lives as a server-side
+ * Supabase secret and is only used inside the Edge Function.
+ *
  * Export: startTool(container)
  */
 
-import { GROQ_API_KEY } from '../../config.js';
-import { sfx }          from '../../audio/audio-manager.js';
+import { SUPABASE_URL }   from '../../config.js';
+import { getAccessToken } from '../../auth/auth.js';
+import { sfx }            from '../../audio/audio-manager.js';
 
 const MODEL         = 'llama-3.1-8b-instant';
 const MAX_HISTORY   = 20;   // messages kept in context (10 conversation turns)
@@ -35,13 +38,10 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 // ── Tool entry point ──────────────────────────────────────────────────────────
 
 export function startTool(container) {
-  if (!GROQ_API_KEY || GROQ_API_KEY === 'your_groq_api_key_here') {
+  if (!SUPABASE_URL) {
     const warn = el('div', 'pc-tool-warn');
     warn.style.cssText = 'padding:1rem;white-space:pre;';
-    warn.textContent =
-      '  ✗  GROQ_API_KEY not configured.\n' +
-      '  Add your key to js/config.js:\n\n' +
-      '  export const GROQ_API_KEY = \'gsk_...\';';
+    warn.textContent = '  ✗  SUPABASE_URL not configured in js/config.js';
     container.appendChild(warn);
     return;
   }
@@ -139,11 +139,13 @@ export function startTool(container) {
   // ─ Fetch full response from Groq (streaming under the hood) ──────────────
 
   async function fetchResponse(messages) {
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const token = getAccessToken();
+    if (!token) throw new Error('Not signed in');
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/groq-proxy`, {
       method:  'POST',
       headers: {
         'Content-Type':  'application/json',
-        'Authorization': `Bearer ${GROQ_API_KEY}`,
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify({
         model:    MODEL,

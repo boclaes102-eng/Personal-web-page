@@ -18,63 +18,32 @@ const SCR_W = 1.28, SCR_H = 0.96;
 const SCR_Y = 0.16;  // offset above group centre to leave room for knobs below
 const SCR_Z = TV_D / 2 + 0.01; // just in front of the body's front face
 
-// ── Animated static texture ───────────────────────────────────────────────────
-// Low resolution (192×144) on purpose — Three.js scales it up and the pixelation
-// adds to the vintage look. Redrawing at ~10 fps is cheap at this resolution.
-const ST_W = 192, ST_H = 144;
+// ── Video texture (plays videoplayback.mp4 on the TV screen) ─────────────────
+let _videoEl  = null;
+let _videoTex = null;
 
-let _sCv  = null;   // canvas
-let _sCtx = null;   // 2-d context
-let _sTex = null;   // CanvasTexture
+function _initVideo() {
+  if (_videoTex) return _videoTex;
 
-function _initStatic() {
-  if (_sCv) return;
-  _sCv            = document.createElement('canvas');
-  _sCv.width      = ST_W;
-  _sCv.height     = ST_H;
-  _sCtx           = _sCv.getContext('2d');
-  _drawStatic();
-  _sTex               = new THREE.CanvasTexture(_sCv);
-  _sTex.minFilter     = THREE.LinearFilter;
-  _sTex.generateMipmaps = false;
-}
+  _videoEl             = document.createElement('video');
+  _videoEl.src         = 'news.mp4';
+  _videoEl.loop        = true;
+  _videoEl.muted       = true;    // muted = autoplay allowed without gesture
+  _videoEl.playsInline = true;
+  _videoEl.style.display = 'none';
+  document.body.appendChild(_videoEl);
 
-function _drawStatic() {
-  const id  = _sCtx.createImageData(ST_W, ST_H);
-  const d   = id.data;
-  const cx  = ST_W / 2, cy = ST_H / 2;
-  const R   = 10;   // corner radius in canvas pixels
+  _videoTex               = new THREE.VideoTexture(_videoEl);
+  _videoTex.minFilter     = THREE.LinearFilter;
+  _videoTex.generateMipmaps = false;
 
-  for (let y = 0; y < ST_H; y++) {
-    // Row brightness bias creates horizontal banding, mimicking CRT scan-line variation.
-    const rowBias = (Math.random() * 90) | 0;
-    for (let x = 0; x < ST_W; x++) {
-      const idx = (y * ST_W + x) * 4;
+  // Play immediately (muted)
+  _videoEl.play().catch(() => {
+    const retry = () => { _videoEl.play().catch(() => {}); };
+    window.addEventListener('pointerdown', retry, { once: true });
+  });
 
-      // Rounded-corner mask — corners become fully transparent so the plane
-      // blends into the bezel instead of showing hard rectangular edges.
-      // Uses point-inside-circle test for each of the four corners.
-      let outside = false;
-      if (x < R && y < R)               outside = (x-R)**2+(y-R)**2 > R*R;
-      if (x > ST_W-R && y < R)          outside = (x-(ST_W-R))**2+(y-R)**2 > R*R;
-      if (x < R && y > ST_H-R)          outside = (x-R)**2+(y-(ST_H-R))**2 > R*R;
-      if (x > ST_W-R && y > ST_H-R)     outside = (x-(ST_W-R))**2+(y-(ST_H-R))**2 > R*R;
-      if (outside) { d[idx+3] = 0; continue; }
-
-      // Radial vignette — 0.62 chosen so edges are ~60% darker than the centre,
-      // simulating the curved glass of a real CRT tube.
-      const dx = (x - cx) / cx, dy = (y - cy) / cy;
-      const vig = Math.max(0, 1 - (dx * dx + dy * dy) * 0.62);
-
-      const v = Math.min(255, ((Math.random() * 200) | 0) + rowBias) * vig;
-      d[idx]     = v | 0;             // R
-      d[idx + 1] = v | 0;             // G
-      d[idx + 2] = (v * 0.88) | 0;   // B — slightly less, gives warm grey not blue
-      d[idx + 3] = 255;
-    }
-  }
-  _sCtx.putImageData(id, 0, 0);
-  if (_sTex) _sTex.needsUpdate = true;
+  return _videoTex;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -83,39 +52,28 @@ function _mesh(geo, mat)        { return new THREE.Mesh(geo, mat); }
 function _box(w, h, d)          { return new THREE.BoxGeometry(w, h, d); }
 
 // ── Drift animator (multi-axis, per-instance closure) ─────────────────────────
-// Returns a per-frame callback stored as group.userData.customAnimate(t).
-// Three independent sine waves on Y/X/Z axes at different frequencies create
-// the illusion of weightless floating. Quaternions are pre-allocated to avoid GC.
-// floatSpeed, floatPhase, floatAmp, baseY, baseQuat come from userData set in frames.js.
 function _makeDriftAnimator(group) {
   const qY = new THREE.Quaternion(), vY = new THREE.Vector3(0, 1, 0);
   const qX = new THREE.Quaternion(), vX = new THREE.Vector3(1, 0, 0);
   const qZ = new THREE.Quaternion(), vZ = new THREE.Vector3(0, 0, 1);
-  let lastSt = 0;
 
   return (t) => {
     const d = group.userData;
-    // Vertical bob uses the per-object floatAmp and floatSpeed assigned in frames.js.
     group.position.y = d.baseY + Math.sin(t * d.floatSpeed + d.floatPhase) * d.floatAmp;
     group.quaternion.copy(d.baseQuat);
-    // Yaw (0.08 Hz, ±4°) — slow lazy spin
-    qY.setFromAxisAngle(vY, Math.sin(t * 0.08  + d.floatPhase)                    * 0.07);
+    qY.setFromAxisAngle(vY, Math.sin(t * 0.08  + d.floatPhase)                     * 0.07);
     group.quaternion.multiply(qY);
-    // Pitch (70% of floatSpeed, ±2.75°) — gentle nod
-    qX.setFromAxisAngle(vX, Math.sin(t * d.floatSpeed * 0.70 + d.floatPhase)      * 0.048);
+    qX.setFromAxisAngle(vX, Math.sin(t * d.floatSpeed * 0.70 + d.floatPhase)       * 0.048);
     group.quaternion.multiply(qX);
-    // Roll (46% of floatSpeed + phase offset, ±1.8°) — slight tilt
     qZ.setFromAxisAngle(vZ, Math.sin(t * d.floatSpeed * 0.46 + d.floatPhase + 1.3) * 0.032);
     group.quaternion.multiply(qZ);
-
-    // Flicker static at ~10 fps (every 0.1 s)
-    if (t - lastSt > 0.1) { lastSt = t; _drawStatic(); }
+    // VideoTexture updates itself automatically each frame — no manual redraw needed
   };
 }
 
 // ── Public builder ────────────────────────────────────────────────────────────
 export function buildTelevision(proj) {
-  _initStatic();
+  const videoTex = _initVideo();
   ensureLights();
 
   const gc    = new THREE.Color(proj.glowColor || '#88aaff');
@@ -129,7 +87,7 @@ export function buildTelevision(proj) {
   const mAnt    = _mat(0x888070, 24);   // silver antenna
   const mVent   = _mat(0x100e0c,  4);   // very dark vent slots
 
-  const mScreen = new THREE.MeshBasicMaterial({ map: _sTex });
+  const mScreen = new THREE.MeshBasicMaterial({ map: videoTex });
 
   const mGlow = new THREE.MeshBasicMaterial({
     color: gc, transparent: true, opacity: 0.07,
@@ -162,6 +120,7 @@ export function buildTelevision(proj) {
   // A5 — screen glow halo (fades with zoom)
   const glowPlane = _mesh(new THREE.PlaneGeometry(SCR_W + 0.10, SCR_H + 0.08), mGlow);
   glowPlane.position.set(0, SCR_Y, TV_D / 2 + 0.08);
+  glowPlane.raycast = () => {};   // prevent glow from blocking screen clicks
   group.add(glowPlane);
 
   // A6 — screen point light (phosphor-coloured)

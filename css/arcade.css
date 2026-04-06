@@ -214,8 +214,7 @@
 
 #arc-canvas {
   display:         block;
-  width:           100%;
-  height:          100%;
+  max-width:       100%;
   image-rendering: pixelated;
 }
 
@@ -481,6 +480,229 @@
   flex-shrink:     0;
   padding-top:     0.5rem;
   border-top:      1px solid var(--arc-dk);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SCREEN: PONG MODE PICKER
+   ═══════════════════════════════════════════════════════════ */
+#arc-screen-pong-mode {
+  flex-direction:  column;
+  align-items:     center;
+  justify-content: center;
+  gap:             1.2rem;
+  padding:         2rem;
+}
+
+.arc-mode-title {
+  font-size:       clamp(1.8rem, 4vw, 2.8rem);
+  font-weight:     bold;
+  letter-spacing:  0.30em;
+  color:           #00ffcc;
+  text-shadow:     0 0 22px #00ffcc;
+}
+
+.arc-mode-sub {
+  font-size:       0.78em;
+  letter-spacing:  0.18em;
+  color:           rgba(232, 208, 255, 0.40);
+  margin-top:      -0.6rem;
+}
+
+.arc-mode-btns {
+  display:         flex;
+  flex-direction:  column;
+  gap:             0.7rem;
+  width:           100%;
+  max-width:       460px;
+}
+
+.arc-mode-btn {
+  display:         flex;
+  flex-direction:  column;
+  align-items:     flex-start;
+  gap:             0.22rem;
+  padding:         0.9rem 1.4rem;
+  background:      transparent;
+  border:          1px solid rgba(0, 255, 204, 0.22);
+  color:           var(--arc-text);
+  font-family:     inherit;
+  cursor:          pointer;
+  text-align:      left;
+  transition:      border-color 0.15s, background 0.15s;
+}
+.arc-mode-btn:hover,
+.arc-mode-btn.selected {
+  border-color:    #00ffcc;
+  background:      rgba(0, 255, 204, 0.08);
+}
+
+.arc-mode-label {
+  font-size:       1.1em;
+  font-weight:     bold;
+  letter-spacing:  0.18em;
+  color:           #00ffcc;
+  text-shadow:     0 0 8px #00ffcc;
+}
+
+.arc-mode-desc {
+  font-size:       0.70em;
+  letter-spacing:  0.08em;
+  color:           rgba(232, 208, 255, 0.40);
+}
+
+.arc-mode-hint {
+  font-size:       0.68em;
+  color:           rgba(232, 208, 255, 0.28);
+  letter-spacing:  0.08em;
+  text-align:      center;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SCREEN: LOBBY / WAITING ROOM
+   ═══════════════════════════════════════════════════════════ */
+#arc-screen-lobby {
+  flex-direction:  column;
+  align-items:     center;
+  justify-content: center;
+  gap:             1.1rem;
+  padding:         2rem;
+}
+
+.arc-lobby-title {
+  font-size:       clamp(1.4rem, 3.5vw, 2.2rem);
+  font-weight:     bold;
+  letter-spacing:  0.28em;
+  color:           var(--arc-neon);
+  text-shadow:     0 0 22px var(--arc-neon);
+}
+
+.arc-lobby-status {
+  font-size:       0.82em;
+  letter-spacing:  0.16em;
+  color:           rgba(232, 208, 255, 0.65);
+  min-height:      1.4em;
+  text-align:      center;
+}
+
+.arc-lobby-dots {
+  display:         flex;
+  gap:             0.55rem;
+}
+.arc-lobby-dots span {
+  width:           8px; height: 8px;
+  border-radius:   50%;
+  background:      var(--arc-neon);
+  animation:       arc-dot-bounce 1.2s ease-in-out infinite;
+}
+.arc-lobby-dots span:nth-child(2) { animation-delay: 0.2s; }
+.arc-lobby-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes arc-dot-bounce {
+  0%, 80%, 100% { transform: scale(0.5); opacity: 0.35; }
+  40%            { transform: scale(1.0); opacity: 1.00; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SCREEN: MP RESULT
+   ═══════════════════════════════════════════════════════════ */
+#arc-screen-mp-result {
+  flex-direction:  column;
+  align-items:     center;
+  justify-content: center;
+  gap:             1.0rem;
+  padding:         2rem;
+}
+
+.arc-mp-result-label {
+  font-size:       clamp(2rem, 6vw, 3.5rem);
+  font-weight:     bold;
+  letter-spacing:  0.25em;
+  text-shadow:     0 0 28px currentColor;
+}
+
+.arc-mp-score {
+  font-size:       clamp(1.1rem, 2.5vw, 1.6rem);
+  letter-spacing:  0.14em;
+  color:           rgba(232, 208, 255, 0.70);
+}
+
+.arc-mp-rematch-hint {
+  font-size:       0.75em;
+  letter-spacing:  0.12em;
+  color:           rgba(232, 208, 255, 0.45);
+  min-height:      1.3em;
+  text-align:      center;
+}
+
+/* ── Virtual D-pad (touch devices) ───────────────────────── */
+#arc-dpad {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 10px 16px 14px;
+  pointer-events: none;
+  z-index: 10;
+  gap: 12px;
+}
+
+.arc-dpad-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  pointer-events: all;
+}
+
+.arc-dpad-row {
+  display: flex;
+  gap: 4px;
+}
+
+.arc-dpad-btn {
+  width: 52px;
+  height: 52px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.arc-dpad-btn:active,
+.arc-dpad-btn.pressed {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.arc-dpad-btn.arc-dpad-fire {
+  width: 64px;
+  height: 64px;
+  background: rgba(255, 50, 80, 0.3);
+  border-color: rgba(255, 80, 100, 0.5);
+  font-size: 14px;
+  letter-spacing: 0.05em;
+  border-radius: 50%;
+  color: #ff6688;
+}
+.arc-dpad-btn.arc-dpad-fire:active { background: rgba(255, 50, 80, 0.55); }
+
+.arc-dpad-btn.arc-dpad-center {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 50%;
+  font-size: 10px;
 }
 
 /* ── Responsive ───────────────────────────────────────────── */

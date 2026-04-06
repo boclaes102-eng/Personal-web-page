@@ -4,7 +4,43 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Portfolio — Deep Space</title>
+  <meta name="description" content="An interactive 3D portfolio set in deep space. Explore projects, play arcade games, and chat with an AI terminal." />
+
+  <!-- Open Graph (LinkedIn, Facebook, Discord, WhatsApp) -->
+  <meta property="og:title"       content="Portfolio — Deep Space" />
+  <meta property="og:description" content="An interactive 3D portfolio set in deep space. Explore projects, play arcade games, and chat with an AI terminal." />
+  <meta property="og:image"       content="https://thedeepspaceproject.be/preview.jpg" />
+  <meta property="og:url"         content="https://thedeepspaceproject.be" />
+  <meta property="og:type"        content="website" />
+
+  <!-- Twitter / X card -->
+  <meta name="twitter:card"        content="summary_large_image" />
+  <meta name="twitter:title"       content="Portfolio — Deep Space" />
+  <meta name="twitter:description" content="An interactive 3D portfolio set in deep space." />
+  <meta name="twitter:image"       content="https://thedeepspaceproject.be/preview.jpg" />
+
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+
+  <!--
+    Content-Security-Policy
+    ─────────────────────────────────────────────────────────────────────────────
+    script-src includes 'unsafe-inline' solely because the importmap below must
+    be an inline <script> block — the HTML spec does not allow external importmaps.
+    All other script sources are the CDNs already used by the project.
+    connect-src restricts outbound requests to Supabase (REST, Auth, Realtime,
+    Edge Functions, Storage) — no other origins can receive browser-initiated
+    requests, which limits the blast radius of any XSS that slips through.
+  -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src  'self' https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com 'unsafe-inline';
+    connect-src 'self' https://*.supabase.co wss://*.supabase.co;
+    style-src   'self';
+    img-src     'self' data: blob:;
+    media-src   'self' https://*.supabase.co blob:;
+    object-src  'none';
+    base-uri    'self';
+  " />
 
   <!-- Import map must come before any module script -->
   <script type="importmap">
@@ -41,7 +77,7 @@
   </div>
 
   <!-- ── Audio nudge (shown only when autoplay is blocked) ── -->
-  <div id="audio-nudge">♪ CLICK ANYWHERE TO ENABLE AUDIO</div>
+  <div id="audio-nudge">♪ TAP ANYWHERE TO ENABLE AUDIO</div>
 
   <!-- ── Header ─────────────────────────────────────────── -->
   <div id="header">
@@ -51,6 +87,9 @@
       <button id="header-signout">SIGN OUT</button>
     </div>
   </div>
+
+  <!-- ── Reset button ─────────────────────────────────────── -->
+  <button id="btn-reset" title="Return all props to their original positions">RESET POSITIONS</button>
 
   <!-- ── Presence HUD ──────────────────────────────────────── -->
   <div id="presence-hud" style="display:none">
@@ -96,6 +135,42 @@
 
       <!-- Content area -->
       <div class="arc-content">
+
+        <!-- ⓪ Pong mode picker (AI vs Multiplayer) -->
+        <div id="arc-screen-pong-mode" style="display:none">
+          <div class="arc-mode-title">PONG</div>
+          <div class="arc-mode-sub">SELECT MODE</div>
+          <div class="arc-mode-btns">
+            <button class="arc-mode-btn" id="arc-mode-ai">
+              <span class="arc-mode-label">VS  AI</span>
+              <span class="arc-mode-desc">CLASSIC SINGLE-PLAYER</span>
+            </button>
+            <button class="arc-mode-btn" id="arc-mode-vs">
+              <span class="arc-mode-label">VS  PLAYER</span>
+              <span class="arc-mode-desc">ONLINE MULTIPLAYER</span>
+            </button>
+          </div>
+          <div class="arc-mode-hint">↑ ↓ TO SELECT  ·  ENTER TO CONFIRM  ·  ESC TO BACK</div>
+        </div>
+
+        <!-- ⓪ MP lobby / waiting room -->
+        <div id="arc-screen-lobby" style="display:none">
+          <div class="arc-lobby-title">MATCHMAKING</div>
+          <div class="arc-lobby-status" id="arc-lobby-status">CONNECTING…</div>
+          <div class="arc-lobby-dots"><span></span><span></span><span></span></div>
+          <button class="arc-btn" id="arc-lobby-cancel">CANCEL</button>
+        </div>
+
+        <!-- ⓪ MP result screen -->
+        <div id="arc-screen-mp-result" style="display:none">
+          <div class="arc-mp-result-label" id="arc-mp-result-label">YOU WIN!</div>
+          <div class="arc-mp-score" id="arc-mp-score"></div>
+          <div class="arc-mp-rematch-hint" id="arc-mp-rematch-hint"></div>
+          <div class="arc-go-btns">
+            <button class="arc-btn primary" id="arc-mp-again">PLAY AGAIN</button>
+            <button class="arc-btn" id="arc-mp-menu">MAIN MENU</button>
+          </div>
+        </div>
 
         <!-- ① Main menu -->
         <div id="arc-screen-menu" style="display:none">

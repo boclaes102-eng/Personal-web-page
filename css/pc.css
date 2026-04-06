@@ -635,3 +635,63 @@
 }
 .pc-tool-select:focus { border-color: var(--crt-green); }
 .pc-tool-select option { background: var(--crt-bg); }
+
+/* ── Mobile responsive ─────────────────────────────────────────────────────── */
+@media (max-width: 680px) {
+
+  /* Sidebar → horizontal scrollable tab strip */
+  .pc-workspace { flex-direction: column; }
+
+  .pc-sidebar {
+    width: 100%;
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-right: none;
+    border-bottom: 1px solid var(--crt-green-dark);
+    flex-shrink: 0;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .pc-sidebar::-webkit-scrollbar { display: none; }
+
+  .pc-sidebar-header,
+  .pc-sidebar-footer { display: none; }
+
+  .pc-sidebar-item {
+    flex-shrink: 0;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    border-left: none;
+    border-bottom: none;
+    border-top: 3px solid transparent;
+    border-right: 1px solid rgba(0,255,65,0.08);
+    padding: 0.55rem 0.9rem 0.4rem;
+    min-width: max-content;
+  }
+  .pc-sidebar-item:hover  { border-left-color: transparent; border-top-color: var(--crt-green-dark); }
+  .pc-sidebar-item.active { border-left-color: transparent; border-top-color: var(--crt-green); }
+
+  .pc-sidebar-item-label { font-size: 0.72em; }
+  .pc-sidebar-item-count { font-size: 0.62em; }
+
+  /* Icon grid — 2 columns on mobile */
+  .pc-icon-grid {
+    grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  }
+
+  /* Larger tap targets for buttons */
+  .pc-shutdown-btn,
+  .pc-window-back,
+  .pc-tool-btn {
+    min-height: 36px;
+    padding: 0.4rem 0.8rem;
+  }
+
+  /* App window fills full panel */
+  .pc-window { position: absolute; inset: 0; }
+
+  /* Menubar — hide subtitle on tiny screens */
+  .pc-menubar-sub { display: none; }
+}

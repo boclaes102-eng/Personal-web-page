@@ -8,10 +8,12 @@
  */
 
 import { startPong }     from './games/pong.js';
+import { startPongMP }   from './games/pong-mp.js';
 import { startGalaga }   from './games/galaga.js';
 import { startBreakout } from './games/breakout.js';
 import { submitScore, getLeaderboard,
          subscribeLeaderboard, unsubscribeLeaderboard } from './db.js';
+import { joinLobby, leaveLobby } from './mp-lobby.js';
 import { sfx } from '../audio/audio-manager.js';
 import { getCurrentUser } from '../auth/auth.js';
 
@@ -60,6 +62,11 @@ let _stopGame       = null;   // cleanup fn returned by the active game
 let _currentGameId  = null;
 let _lbGameId       = null;   // game currently shown in leaderboard
 
+// Multiplayer state
+let _mpGameChannel  = null;
+let _mpRematchVote  = false;   // true = this player voted to rematch
+let _mpOpponentVote = false;   // true = opponent voted to rematch
+
 // ── DOM helpers ───────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 
@@ -104,9 +111,12 @@ export function hideArcade(callback) {
 }
 
 // ── Screen management ─────────────────────────────────────────────────────────
+const ALL_SCREENS = [
+  'arc-screen-menu', 'arc-screen-game', 'arc-screen-gameover', 'arc-screen-lb',
+  'arc-screen-pong-mode', 'arc-screen-lobby', 'arc-screen-mp-result',
+];
 function _showScreen(id) {
-  ['arc-screen-menu', 'arc-screen-game', 'arc-screen-gameover', 'arc-screen-lb']
-    .forEach(s => $(s).style.display = 'none');
+  ALL_SCREENS.forEach(s => $(s).style.display = 'none');
   $(id).style.display = 'flex';
 }
 
@@ -224,26 +234,337 @@ function _selectMenuItem(item) {
   if (item.isLeaderboard) {
     sfx('arcade-menu-select');
     _transition(() => _showLeaderboard('pong', null));
+  } else if (item.id === 'pong') {
+    sfx('arcade-menu-select');
+    _transition(() => _showPongModePicker());
   } else {
     _goToGame(item);
   }
 }
 
+// ── Pong mode picker ──────────────────────────────────────────────────────────
+let _modeCursor = 0;  // 0 = AI, 1 = VS Player
+
+function _showPongModePicker() {
+  _modeCursor = 0;
+  _renderModePicker();
+  _showScreen('arc-screen-pong-mode');
+  _attachModeKeys();
+}
+
+function _renderModePicker() {
+  $('arc-mode-ai').classList.toggle('selected', _modeCursor === 0);
+  $('arc-mode-vs').classList.toggle('selected', _modeCursor === 1);
+}
+
+let _modeKeyListener = null;
+
+function _attachModeKeys() {
+  _detachModeKeys();
+
+  $('arc-mode-ai').onclick = () => { _modeCursor = 0; _confirmMode(); };
+  $('arc-mode-vs').onclick = () => { _modeCursor = 1; _confirmMode(); };
+
+  _modeKeyListener = e => {
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown' ||
+        e.key === 'w' || e.key === 'W' || e.key === 's' || e.key === 'S') {
+      e.stopImmediatePropagation();
+      sfx('arcade-menu-move');
+      _modeCursor = _modeCursor === 0 ? 1 : 0;
+      _renderModePicker();
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.stopImmediatePropagation();
+      _confirmMode();
+    } else if (e.key === 'Escape') {
+      e.stopImmediatePropagation();
+      _detachModeKeys();
+      sfx('arcade-exit');
+      _transition(() => _showMenu());
+    }
+  };
+  window.addEventListener('keydown', _modeKeyListener, true);
+}
+
+function _detachModeKeys() {
+  if (_modeKeyListener) {
+    window.removeEventListener('keydown', _modeKeyListener, true);
+    _modeKeyListener = null;
+  }
+}
+
+function _confirmMode() {
+  _detachModeKeys();
+  const pongDef = GAMES.find(g => g.id === 'pong');
+  if (_modeCursor === 0) {
+    // VS AI — launch normally
+    _goToGame(pongDef);
+  } else {
+    // VS Player — go to lobby
+    sfx('arcade-menu-select');
+    _transition(() => _showLobby());
+  }
+}
+
+// ── Multiplayer lobby ─────────────────────────────────────────────────────────
+
+function _showLobby() {
+  _showScreen('arc-screen-lobby');
+  $('arc-lobby-status').textContent = 'CONNECTING…';
+
+  $('arc-lobby-cancel').onclick = () => {
+    sfx('arcade-exit');
+    leaveLobby();
+    _transition(() => _showMenu());
+  };
+
+  joinLobby(
+    (isHost, gameChannel, gameClient) => {
+      _mpGameChannel = gameChannel;
+      sfx('arcade-menu-select');
+      _transition(() => _launchPongMP(isHost, gameChannel, gameClient));
+    },
+    msg => { if ($('arc-lobby-status')) $('arc-lobby-status').textContent = msg; },
+  );
+}
+
+// ── Launch multiplayer Pong ───────────────────────────────────────────────────
+
+function _launchPongMP(isHost, gameChannel) {
+  _currentGameId = 'pong-mp';
+  _showScreen('arc-screen-game');
+  const gameCanvas  = $('arc-canvas');
+  const container   = $('arc-screen-game');
+
+  const dpadHeight  = _isTouch() ? 170 : 0;
+  gameCanvas.width  = container.clientWidth  || 800;
+  gameCanvas.height = (container.clientHeight || 500) - dpadHeight;
+
+  // Guard: ensure each end-of-game path fires at most once
+  let _ended = false;
+
+  function _onMPGameOver(youWon) {
+    if (_ended) return;
+    _ended = true;
+    _stopCurrentGame();
+    sfx('arcade-menu-select');
+    _transition(() => _showMPResult(youWon, false));
+  }
+
+  function _onOpponentLeft() {
+    if (_ended) return;
+    _ended = true;
+    _stopCurrentGame();
+    sfx('arcade-exit');
+    _transition(() => _showMPResult(true, true));
+  }
+
+  _stopGame = startPongMP(gameCanvas, isHost, gameChannel, _onMPGameOver, _onOpponentLeft);
+
+  // Virtual D-pad for touch devices
+  if (_isTouch()) {
+    _dpadCleanup = _createDpad(container, () => {
+      window.removeEventListener('keydown', escListener, true);
+      _stopCurrentGame();
+      _cleanupMPChannel();
+      _goToMenu();
+    });
+  }
+
+  gameChannel.on('broadcast', { event: 'opponent_left' }, () => _onOpponentLeft());
+
+  const escListener = e => {
+    if (e.key === 'Escape') {
+      e.stopImmediatePropagation();
+      window.removeEventListener('keydown', escListener, true);
+      _stopCurrentGame();
+      _cleanupMPChannel();
+      _goToMenu();
+    }
+  };
+  window.addEventListener('keydown', escListener, true);
+}
+
+// ── MP result screen ──────────────────────────────────────────────────────────
+
+function _showMPResult(youWon, opponentLeft) {
+  _mpRematchVote  = false;
+  _mpOpponentVote = false;
+
+  _showScreen('arc-screen-mp-result');
+
+  const label = $('arc-mp-result-label');
+  const score = $('arc-mp-score');
+  const hint  = $('arc-mp-rematch-hint');
+  const again = $('arc-mp-again');
+  const menu  = $('arc-mp-menu');
+
+  if (opponentLeft) {
+    label.textContent = 'OPPONENT LEFT';
+    label.style.color = 'rgba(232,208,255,0.6)';
+    score.textContent = '';
+    hint.textContent  = 'YOUR OPPONENT HAS LEFT THE GAME';
+    again.disabled    = true;
+    again.style.opacity = '0.35';
+    again.style.cursor  = 'not-allowed';
+  } else {
+    label.textContent = youWon ? 'YOU WIN!' : 'YOU LOSE';
+    label.style.color = youWon ? '#00ffcc' : '#ff4466';
+    score.textContent = '';
+    hint.textContent  = 'WAITING FOR OPPONENT…';
+    again.disabled    = false;
+    again.style.opacity = '';
+    again.style.cursor  = '';
+
+    // Listen for opponent's rematch vote / leave via the still-open game channel
+    if (_mpGameChannel) {
+      _mpGameChannel.on('broadcast', { event: 'rematch_vote' }, () => {
+        _mpOpponentVote = true;
+        _checkRematch();
+      });
+      _mpGameChannel.on('broadcast', { event: 'opponent_left' }, () => {
+        hint.textContent  = 'OPPONENT HAS LEFT';
+        again.disabled    = true;
+        again.style.opacity = '0.35';
+        again.style.cursor  = 'not-allowed';
+      });
+    }
+  }
+
+  again.onclick = () => {
+    if (again.disabled) return;
+    _mpRematchVote = true;
+    again.textContent   = 'WAITING FOR OPPONENT…';
+    again.disabled      = true;
+    again.style.opacity = '0.55';
+    _mpGameChannel?.send({ type: 'broadcast', event: 'rematch_vote', payload: {} });
+    _checkRematch();
+  };
+
+  menu.onclick = () => {
+    _mpGameChannel?.send({ type: 'broadcast', event: 'opponent_left', payload: {} });
+    _cleanupMPChannel();
+    _goToMenu();
+  };
+}
+
+function _checkRematch() {
+  if (!_mpRematchVote || !_mpOpponentVote) return;
+  // Both voted — go back to lobby to re-match
+  sfx('arcade-menu-select');
+  _cleanupMPChannel();
+  _transition(() => _showLobby());
+}
+
+function _cleanupMPChannel() {
+  if (_mpGameChannel) { _mpGameChannel.unsubscribe(); _mpGameChannel = null; }
+
+  _mpRematchVote  = false;
+  _mpOpponentVote = false;
+  leaveLobby();
+}
+
 // ── Game launch ───────────────────────────────────────────────────────────────
+// ── Virtual D-pad (touch devices) ────────────────────────────────────────────
+const _isTouch = () => 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+let _dpadCleanup = null;
+
+function _fireSyntheticKey(key, type) {
+  window.dispatchEvent(new KeyboardEvent(type, { key, bubbles: true, cancelable: true }));
+}
+
+function _createDpad(gameContainer, onBack) {
+  const dpad = document.createElement('div');
+  dpad.id = 'arc-dpad';
+
+  // Left side: directional buttons
+  dpad.innerHTML = `
+    <div class="arc-dpad-side" id="arc-dpad-left">
+      <div class="arc-dpad-row">
+        <div class="arc-dpad-btn arc-dpad-center"></div>
+        <div class="arc-dpad-btn" data-key-down="ArrowUp"    data-key-alt="w">▲</div>
+        <div class="arc-dpad-btn arc-dpad-center"></div>
+      </div>
+      <div class="arc-dpad-row">
+        <div class="arc-dpad-btn" data-key-down="ArrowLeft">◄</div>
+        <div class="arc-dpad-btn arc-dpad-center">✦</div>
+        <div class="arc-dpad-btn" data-key-down="ArrowRight">►</div>
+      </div>
+      <div class="arc-dpad-row">
+        <div class="arc-dpad-btn arc-dpad-center"></div>
+        <div class="arc-dpad-btn" data-key-down="ArrowDown"  data-key-alt="s">▼</div>
+        <div class="arc-dpad-btn arc-dpad-center"></div>
+      </div>
+    </div>
+    <div class="arc-dpad-side" id="arc-dpad-right">
+      <div class="arc-dpad-btn arc-dpad-fire" data-key-down=" ">FIRE</div>
+      <div class="arc-dpad-btn" id="arc-dpad-back" style="margin-top:8px;font-size:10px;letter-spacing:.05em;">BACK</div>
+    </div>
+  `;
+
+  gameContainer.appendChild(dpad);
+
+  // Wire up each button: touchstart → keydown, touchend → keyup
+  const heldKeys = new Set();
+  dpad.querySelectorAll('[data-key-down]').forEach(btn => {
+    const key    = btn.dataset.keyDown;
+    const keyAlt = btn.dataset.keyAlt;
+
+    const press = e => {
+      e.preventDefault();
+      if (!heldKeys.has(key)) {
+        heldKeys.add(key);
+        _fireSyntheticKey(key, 'keydown');
+        if (keyAlt) _fireSyntheticKey(keyAlt, 'keydown');
+        btn.classList.add('pressed');
+      }
+    };
+    const release = e => {
+      e.preventDefault();
+      heldKeys.delete(key);
+      _fireSyntheticKey(key, 'keyup');
+      if (keyAlt) _fireSyntheticKey(keyAlt, 'keyup');
+      btn.classList.remove('pressed');
+    };
+
+    btn.addEventListener('touchstart', press,   { passive: false });
+    btn.addEventListener('touchend',   release,  { passive: false });
+    btn.addEventListener('touchcancel',release,  { passive: false });
+  });
+
+  // Back button
+  dpad.querySelector('#arc-dpad-back').addEventListener('touchend', e => {
+    e.preventDefault();
+    onBack();
+  });
+
+  return () => { dpad.remove(); heldKeys.clear(); };
+}
+
 function _launchGame(gameDef) {
   _currentGameId = gameDef.id;
 
   _showScreen('arc-screen-game');
   const gameCanvas = $('arc-canvas');
+  const container  = $('arc-screen-game');
 
-  const container = $('arc-screen-game');
+  // Reserve height for the D-pad on touch devices so it doesn't overlap the game
+  const dpadHeight = _isTouch() ? 170 : 0;
   gameCanvas.width  = container.clientWidth  || 800;
-  gameCanvas.height = container.clientHeight || 500;
+  gameCanvas.height = (container.clientHeight || 500) - dpadHeight;
 
   _stopGame = gameDef.start(gameCanvas, score => {
     _stopCurrentGame();
     _autoSubmitAndShowLeaderboard(gameDef, score);
   });
+
+  // Virtual D-pad for touch devices
+  if (_isTouch()) {
+    _dpadCleanup = _createDpad(container, () => {
+      window.removeEventListener('keydown', escListener, true);
+      _stopCurrentGame();
+      _goToMenu();
+    });
+  }
 
   const escListener = e => {
     if (e.key === 'Escape') {
@@ -258,6 +579,7 @@ function _launchGame(gameDef) {
 
 function _stopCurrentGame() {
   if (_stopGame) { _stopGame(); _stopGame = null; }
+  if (_dpadCleanup) { _dpadCleanup(); _dpadCleanup = null; }
 }
 
 // ── Auto-submit score then show leaderboard ───────────────────────────────────

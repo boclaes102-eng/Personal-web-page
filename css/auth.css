@@ -385,4 +385,10 @@
   .auth-card   { padding: 1.6rem 1.4rem; }
   .auth-title  { font-size: 1.25rem; }
   .auth-input  { font-size: 0.82rem; }
+
+  /* Larger tap target for sign-out button */
+  #header-signout {
+    padding: 0.45rem 0.75rem;
+    min-height: 36px;
+  }
 }

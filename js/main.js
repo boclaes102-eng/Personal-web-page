@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * main.js
  * Entry point — handles auth gate, then wires all modules and runs the animation loop.
@@ -12,6 +13,7 @@ import { setupInput, applyCelestialMomentum }  from './core/input.js';
 import { initAudio, startAmbient, stopAmbient, setInitialTheme, setCustomTrackUrl, resumeAudio, isMusicPaused, isAudioRunning } from './audio/audio-manager.js';
 import { parseHashTokens, checkSession, signOut, loadUserTheme, loadAllCustomTrackUrls } from './auth/auth.js';
 import { initPresence, destroyPresence } from './presence/presence.js';
+import { trackVisit }                   from './analytics/tracker.js';
 import { showAuthOverlay }                     from './auth/auth-ui.js';
 import { sfx }                                 from './audio/audio-manager.js';
 
@@ -30,7 +32,7 @@ function animate(nowMs) {
   applyCelestialMomentum();
 
   if (cam.mode !== 'zoomed') {
-    animateFrames(t);
+    animateFrames(t, dt);
   }
 
   camera.position.copy(cam.pos);
@@ -80,6 +82,9 @@ function startWorld(user) {
     );
   });
 
+  // Log the visit
+  trackVisit(user);
+
   // Start live presence
   const presenceHud = document.getElementById('presence-hud');
   if (presenceHud) presenceHud.style.display = '';
@@ -125,7 +130,7 @@ function startWorld(user) {
     // If so, show the nudge so the user knows to click to enable audio.
     setTimeout(() => {
       if (_nudgeEl && !isMusicPaused() && !isAudioRunning()) {
-        _nudgeEl.style.display = 'block';
+        _nudgeEl.style.display = 'flex';
       }
     }, 800);
   }).catch(() => startAmbient());
@@ -134,6 +139,8 @@ function startWorld(user) {
 }
 
 // ── Bootstrap: auth check then launch ────────────────────────────────────────
+const _nudgeEl = document.getElementById('audio-nudge');
+
 async function bootstrap() {
   // Create AudioContext eagerly — for returning users whose browsers have learned
   // this site plays audio the context may auto-resume with no gesture needed.
@@ -141,14 +148,15 @@ async function bootstrap() {
 
   // On first gesture: retry resuming a suspended context so music starts without
   // requiring a second click (handles new visits or post-reload auto-login).
-  const _nudgeEl = document.getElementById('audio-nudge');
   function _onFirstGesture() {
     initAudio();
     resumeAudio();
     if (_nudgeEl) _nudgeEl.style.display = 'none';
   }
   window.addEventListener('pointerdown', _onFirstGesture, { once: true });
+  window.addEventListener('touchstart',  _onFirstGesture, { once: true, passive: true });
   window.addEventListener('keydown',     _onFirstGesture, { once: true });
+  if (_nudgeEl) _nudgeEl.addEventListener('touchstart', _onFirstGesture, { once: true, passive: true });
   // 1. Check for Supabase callback tokens in the URL hash
   //    (password recovery or email confirmation links redirect here)
   const hashData = parseHashTokens();

@@ -14,15 +14,52 @@ import { sfx } from '../audio/audio-manager.js';
 // ── Categories ────────────────────────────────────────────────────────────────
 
 const CATEGORIES = [
-  { id: 'crypto',  label: 'CRYPTOGRAPHY',    icon: '🔐' },
-  { id: 'recon',   label: 'RECON & ANALYSIS', icon: '🔍' },
-  { id: 'field',   label: 'FIELD TOOLS',      icon: '🛠' },
-  { id: 'ai',      label: 'A.I. SYSTEM',      icon: '🤖' },
+  { id: 'operator', label: 'OPERATOR FILE',    icon: '' },
+  { id: 'crypto',   label: 'CRYPTOGRAPHY',     icon: '' },
+  { id: 'recon',    label: 'RECON & ANALYSIS', icon: '' },
+  { id: 'field',    label: 'FIELD TOOLS',      icon: '' },
+  { id: 'ai',       label: 'A.I. SYSTEM',      icon: '' },
 ];
 
 // ── App definitions ───────────────────────────────────────────────────────────
 
 const APPS = [
+  // ── OPERATOR FILE ──
+  {
+    id:       'cv',
+    cat:      'operator',
+    exe:      'PERSONNEL.EXE',
+    name:     'Curriculum Vitae',
+    desc:     'Classified operator dossier — experience, education, skills and contact details.',
+    art: [
+      '┌──────┐',
+      '│ ░░░░ │',
+      '│ ░░░░ │',
+      '│ ░░░░ │',
+      '│  ██  │',
+      '└──────┘',
+      '  C.V.  ',
+    ],
+    loader: () => import('./tools/cv.js'),
+  },
+  {
+    id:       'github-op',
+    cat:      'operator',
+    exe:      'GITHUB.EXE',
+    name:     'GitHub Profile',
+    desc:     'Classified intelligence dossier. Navigate to boclaes102-eng on GitHub.',
+    art: [
+      '  .---.  ',
+      ' /o   o\\ ',
+      '|  ---  |',
+      ' \\ ___ / ',
+      '  )   (  ',
+      ' /_) (_\\ ',
+      ' GITHUB  ',
+    ],
+    loader: () => import('./tools/github.js'),
+  },
+
   // ── CRYPTOGRAPHY ──
   {
     id:       'hashgen',
@@ -112,6 +149,23 @@ const APPS = [
     loader: () => import('./tools/netinfo.js'),
   },
   {
+    id:       'analytics',
+    cat:      'recon',
+    exe:      'ANALYTICS.EXE',
+    name:     'Site Analytics',
+    desc:     'Live visitor stats, room popularity, device & browser breakdown, and arcade top scores.',
+    art: [
+      '  ▁▃▅█▇  ',
+      ' ▁▃▅████ ',
+      ' ▃▅██████',
+      ' ████████',
+      '---------',
+      ' VISITS  ',
+      ' ROOMS   ',
+    ],
+    loader: () => import('./tools/analytics.js'),
+  },
+  {
     id:       'mailspy',
     cat:      'recon',
     exe:      'MAILSPY.EXE',
@@ -147,24 +201,6 @@ const APPS = [
     ],
     loader: () => import('./tools/penguide.js'),
   },
-  {
-    id:       'github',
-    cat:      'field',
-    exe:      'GITHUB.EXE',
-    name:     'GitHub Profile',
-    desc:     'Classified intelligence dossier. Navigate to boclaes102-eng on GitHub.',
-    art: [
-      '  .---.  ',
-      ' /o   o\\ ',
-      '|  ---  |',
-      ' \\ ___ / ',
-      '  )   (  ',
-      ' /_) (_\\ ',
-      ' GITHUB  ',
-    ],
-    loader: () => import('./tools/github.js'),
-  },
-
   // ── A.I. SYSTEM ──
   {
     id:       'aichat',
@@ -194,7 +230,7 @@ let _clockId     = null;
 let _onShut      = null;
 let _activeWin   = null;
 let _keyHandler  = null;
-let _activeCatId = CATEGORIES[0].id;
+let _activeCatId = 'operator';
 
 // ── DOM helpers ───────────────────────────────────────────────────────────────
 

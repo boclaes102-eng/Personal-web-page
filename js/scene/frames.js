@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * frames.js
  * Project frame panels — texture generation, geometry, and scene placement.
@@ -196,11 +197,16 @@ export function buildFrames() {
       //               because 3D objects read as heavier and need bigger motion to feel alive.
       // floatSpeed  — radians/second of the sine wave (0.14–0.22). Slower = weightier feel.
       Object.assign(group.userData, {
+        origPos:    wp.clone(),
+        origQuat:   group.quaternion.clone(),
         baseQuat:   group.quaternion.clone(),
         baseY:      wp.y,
         floatPhase: Math.random() * Math.PI * 2,
         floatAmp:   0.28 + Math.random() * 0.10,
         floatSpeed: 0.14 + Math.random() * 0.08,
+        propVel:    new THREE.Vector3(),
+        angVel:     new THREE.Vector3(),
+        _isDragging: false,
       });
       clickTarget.userData.frameGroup = group;
       clickTargets.push(clickTarget);
@@ -216,11 +222,16 @@ export function buildFrames() {
       group.lookAt(0, 0, 0);
       // Arcade cabinet floats with a heavier, slower motion — it feels bulky.
       Object.assign(group.userData, {
+        origPos:    wp.clone(),
+        origQuat:   group.quaternion.clone(),
         baseQuat:   group.quaternion.clone(),
         baseY:      wp.y,
         floatPhase: Math.random() * Math.PI * 2,
         floatAmp:   0.18 + Math.random() * 0.08,  // 0.18–0.26 world units
         floatSpeed: 0.12 + Math.random() * 0.06,  // 0.12–0.18 rad/s — heavy feel
+        propVel:    new THREE.Vector3(),
+        angVel:     new THREE.Vector3(),
+        _isDragging: false,
       });
       clickTarget.userData.frameGroup = group;
       clickTargets.push(clickTarget);
@@ -236,11 +247,16 @@ export function buildFrames() {
       group.lookAt(0, 0, 0);
       // TV floats slightly slower and smaller than the PC — it feels bulkier.
       Object.assign(group.userData, {
+        origPos:    wp.clone(),
+        origQuat:   group.quaternion.clone(),
         baseQuat:   group.quaternion.clone(),
         baseY:      wp.y,
         floatPhase: Math.random() * Math.PI * 2,
         floatAmp:   0.24 + Math.random() * 0.09,  // 0.24–0.33 world units
         floatSpeed: 0.15 + Math.random() * 0.07,  // 0.15–0.22 rad/s
+        propVel:    new THREE.Vector3(),
+        angVel:     new THREE.Vector3(),
+        _isDragging: false,
       });
       clickTarget.userData.frameGroup = group;
       clickTargets.push(clickTarget);
@@ -255,11 +271,16 @@ export function buildFrames() {
       group.position.copy(wp);
       group.lookAt(0, 0, 0);
       Object.assign(group.userData, {
+        origPos:    wp.clone(),
+        origQuat:   group.quaternion.clone(),
         baseQuat:   group.quaternion.clone(),
         baseY:      wp.y,
         floatPhase: Math.random() * Math.PI * 2,
         floatAmp:   0.20 + Math.random() * 0.08,
         floatSpeed: 0.13 + Math.random() * 0.07,
+        propVel:    new THREE.Vector3(),
+        angVel:     new THREE.Vector3(),
+        _isDragging: false,
       });
       clickTarget.userData.frameGroup = group;
       clickTargets.push(clickTarget);
@@ -274,11 +295,16 @@ export function buildFrames() {
       group.position.copy(wp);
       group.lookAt(0, 0, 0);
       Object.assign(group.userData, {
+        origPos:    wp.clone(),
+        origQuat:   group.quaternion.clone(),
         baseQuat:   group.quaternion.clone(),
         baseY:      wp.y,
         floatPhase: Math.random() * Math.PI * 2,
         floatAmp:   0.18 + Math.random() * 0.08,
         floatSpeed: 0.14 + Math.random() * 0.06,
+        propVel:    new THREE.Vector3(),
+        angVel:     new THREE.Vector3(),
+        _isDragging: false,
       });
       clickTarget.userData.frameGroup = group;
       clickTargets.push(clickTarget);
@@ -293,13 +319,18 @@ export function buildFrames() {
     group.lookAt(0, 0, 0);
     group.userData = {
       proj,
-      baseQuat:   group.quaternion.clone(),
-      baseY:      wp.y,
-      floatPhase: Math.random() * Math.PI * 2,
-      floatAmp:   0.07 + Math.random() * 0.055, // 0.07–0.125 — subtle, flat panels feel lighter
-      floatSpeed: 0.32 + Math.random() * 0.22,  // 0.32–0.54 rad/s — faster = lighter feel
-      glowMesh:   null,
-      panelMesh:  null,
+      origPos:     wp.clone(),
+      origQuat:    group.quaternion.clone(),
+      baseQuat:    group.quaternion.clone(),
+      baseY:       wp.y,
+      floatPhase:  Math.random() * Math.PI * 2,
+      floatAmp:    0.07 + Math.random() * 0.055,
+      floatSpeed:  0.32 + Math.random() * 0.22,
+      glowMesh:    null,
+      panelMesh:   null,
+      propVel:     new THREE.Vector3(),
+      angVel:      new THREE.Vector3(),
+      _isDragging: false,
     };
 
     const panel = new THREE.Mesh(
@@ -322,18 +353,90 @@ export function buildFrames() {
   });
 }
 
-export function animateFrames(t) {
+// ── Reset all props to their spawn positions/orientations ────────────────────
+export function resetAllFrames() {
+  const { gsap } = window;
   frames.forEach(f => {
-    // Computer has its own multi-axis drift animator
-    if (typeof f.userData.customAnimate === 'function') {
-      f.userData.customAnimate(t);
+    const d = f.userData;
+    if (!d.origPos) return;
+
+    // Kill any in-flight momentum so it doesn't fight the tween
+    d.propVel?.set(0, 0, 0);
+    d.angVel?.set(0, 0, 0);
+
+    // Animate position back — x/z directly on the mesh, y via baseY (picked up by drift)
+    gsap.to(f.position, { x: d.origPos.x, z: d.origPos.z, duration: 2.5, ease: 'power2.inOut' });
+    gsap.to(d, { baseY: d.origPos.y, duration: 2.5, ease: 'power2.inOut' });
+
+    // Slerp baseQuat back to origQuat via a proxy progress value
+    const startQuat  = d.baseQuat.clone();
+    const targetQuat = d.origQuat;   // origQuat never mutated — safe to reference directly
+    const proxy = { t: 0 };
+    gsap.to(proxy, {
+      t: 1, duration: 2.5, ease: 'power2.inOut',
+      onUpdate() {
+        d.baseQuat.slerpQuaternions(startQuat, targetQuat, proxy.t);
+      },
+      onComplete() {
+        d.baseQuat.copy(targetQuat);
+      },
+    });
+  });
+}
+
+// ── Physics damping constants (per-frame at 60 fps, normalised by dt in the loop) ─
+// Half-life: linDamp ≈ 1.0 s  ·  angDamp ≈ 2.2 s  (space-like, very little drag)
+const _PROP_LIN_DAMP = 0.985; // linear velocity decay per frame @60 fps
+const _PROP_ANG_DAMP = 0.993; // angular velocity decay per frame @60 fps
+
+// Scratch objects — allocated once to avoid per-frame GC pressure
+const _angDeltaQ = new THREE.Quaternion();
+const _angAxis   = new THREE.Vector3();
+
+export function animateFrames(t, dt = 0.016) {
+  // Normalise damping to actual frame time so physics is frame-rate independent.
+  // normT = 1 at 60 fps, 2 at 30 fps, 0.5 at 120 fps.
+  const normT   = dt * 60;
+  const linDamp = Math.pow(_PROP_LIN_DAMP, normT);
+  const angDamp = Math.pow(_PROP_ANG_DAMP, normT);
+
+  frames.forEach(f => {
+    const d = f.userData;
+
+    // ── Linear momentum (frame-rate independent) ─────────────────────────────
+    if (d.propVel) {
+      const spd = d.propVel.lengthSq();
+      if (spd > 1e-8) {
+        f.position.x += d.propVel.x * normT;
+        f.position.z += d.propVel.z * normT;
+        d.baseY       += d.propVel.y * normT;
+        d.propVel.multiplyScalar(linDamp);
+        if (d.propVel.lengthSq() < 1e-10) d.propVel.set(0, 0, 0);
+      }
+    }
+
+    // While grabbed: freeze drift (angular vel was already zeroed on grab start)
+    if (d._isDragging) return;
+
+    // ── Angular momentum — rotates baseQuat so the drift animator inherits it ─
+    if (d.angVel && d.angVel.lengthSq() > 1e-10) {
+      _angAxis.copy(d.angVel).normalize();
+      _angDeltaQ.setFromAxisAngle(_angAxis, d.angVel.length() * normT);
+      d.baseQuat.premultiply(_angDeltaQ); // world-space rotation
+      d.baseQuat.normalize();
+      d.angVel.multiplyScalar(angDamp);
+      if (d.angVel.lengthSq() < 1e-10) d.angVel.set(0, 0, 0);
+    }
+
+    // Custom multi-axis drift (all 3-D props) — reads updated baseQuat
+    if (typeof d.customAnimate === 'function') {
+      d.customAnimate(t);
       return;
     }
-    const d = f.userData;
+
+    // Flat-panel sine bob
     f.position.y = d.baseY + Math.sin(t * d.floatSpeed + d.floatPhase) * d.floatAmp;
     f.quaternion.copy(d.baseQuat);
-    // Gentle pitch wobble (±0.014 rad ≈ ±0.8°) at 65% of float frequency — adds life
-    // without being distracting. 3D objects use their own multi-axis animator instead.
     _tiltQ.setFromAxisAngle(_tiltAxis, Math.sin(t * d.floatSpeed * 0.65 + d.floatPhase) * 0.014);
     f.quaternion.multiply(_tiltQ);
   });

@@ -169,9 +169,12 @@ function makeMarqueeTexture(glowColor) {
   return tex;
 }
 
-// ── Drift animator (same multi-axis float as the computer) ────────────────────
+// ── Drift animator (quaternion-based, same pattern as all other 3D props) ─────
 function makeDriftAnimator(group) {
-  // Randomly seeded per-axis phases so no two cabinets move identically
+  const _yawQ   = new THREE.Quaternion();
+  const _pitchQ = new THREE.Quaternion();
+  const _yAxis  = new THREE.Vector3(0, 1, 0);
+  const _xAxis  = new THREE.Vector3(1, 0, 0);
   const ph = [
     Math.random() * Math.PI * 2,
     Math.random() * Math.PI * 2,
@@ -179,15 +182,10 @@ function makeDriftAnimator(group) {
   ];
   return function (t) {
     const d = group.userData;
-    // Vertical bob — primary float motion
-    group.position.y = d.baseY
-      + Math.sin(t * d.floatSpeed       + ph[0]) * d.floatAmp;
-    // Slow yaw sway ±1.2°
-    group.rotation.y = d.baseQuat.y
-      + Math.sin(t * d.floatSpeed * 0.4 + ph[1]) * 0.021;
-    // Gentle pitch rock ±0.7°
-    group.rotation.x = d.baseQuat.x
-      + Math.sin(t * d.floatSpeed * 0.6 + ph[2]) * 0.012;
+    group.position.y = d.baseY + Math.sin(t * d.floatSpeed + ph[0]) * d.floatAmp;
+    _yawQ.setFromAxisAngle(_yAxis,   Math.sin(t * d.floatSpeed * 0.4 + ph[1]) * 0.021);
+    _pitchQ.setFromAxisAngle(_xAxis, Math.sin(t * d.floatSpeed * 0.6 + ph[2]) * 0.012);
+    group.quaternion.copy(d.baseQuat).multiply(_yawQ).multiply(_pitchQ);
   };
 }
 
@@ -243,7 +241,8 @@ export function buildArcade(proj) {
   const screenMesh = mesh(new THREE.PlaneGeometry(SCR_W, SCR_H), screenMat);
   // Bezel front face is at CAB_D/2 - 0.02 + 0.035 = CAB_D/2 + 0.015.
   // Screen must sit in front of that so it isn't hidden inside the bezel box.
-  screenMesh.position.set(0, SCR_Y, CAB_D / 2 + 0.025);
+  // Bezel front face is at CAB_D/2 + 0.015. Push screen well clear to avoid z-fighting.
+  screenMesh.position.set(0, SCR_Y, CAB_D / 2 + 0.048);
   group.add(screenMesh);
 
   // Screen glow sprite (additive blending, sits just in front of screen)
@@ -257,7 +256,8 @@ export function buildArcade(proj) {
   });
   // +0.10 on each axis — just a thin halo around the screen edge, not a huge blob
   const glowPlane = mesh(new THREE.PlaneGeometry(SCR_W + 0.10, SCR_H + 0.10), glowMat);
-  glowPlane.position.set(0, SCR_Y, CAB_D / 2 + 0.026);
+  glowPlane.position.set(0, SCR_Y, CAB_D / 2 + 0.050);
+  glowPlane.raycast = () => {}; // visual only — must not intercept click/drag raycasts
   group.add(glowPlane);
 
   // ── F. Control panel (angled forward at waist height) ─────────────────────

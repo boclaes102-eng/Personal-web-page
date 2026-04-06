@@ -32,9 +32,14 @@ body.hovering  { cursor: pointer;  }
   letter-spacing: 0.14em;
   color: rgba(0, 255, 65, 0.6);
   border: 1px solid rgba(0, 255, 65, 0.2);
-  padding: 0.35rem 1rem;
-  background: rgba(4, 10, 4, 0.75);
-  pointer-events: none;
+  padding: 0.55rem 1.4rem;
+  background: rgba(4, 10, 4, 0.85);
+  pointer-events: all;
+  cursor: pointer;
+  min-height: 44px;
+  display: none;
+  align-items: center;
+  white-space: nowrap;
   animation: nudge-pulse 2s ease-in-out infinite;
 }
 @keyframes nudge-pulse {
@@ -441,7 +446,93 @@ body.hovering  { cursor: pointer;  }
 #lore-panel::-webkit-scrollbar-track { background: transparent; }
 #lore-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.10); border-radius: 2px; }
 
-/* ── Scrollbar ────────────────────────────────────────────── */
+/* ── Reset button ─────────────────────────────────────────── */
+#btn-reset {
+  position: fixed;
+  bottom: 1.6rem;
+  right: 1.6rem;
+  z-index: 15;
+  background: rgba(4, 8, 20, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.45);
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.22em;
+  padding: 0.42rem 1rem;
+  border-radius: 2px;
+  cursor: pointer;
+  pointer-events: all;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+#btn-reset:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.06);
+}
+@media (max-width: 640px) {
+  #btn-reset { bottom: 1rem; right: 1rem; padding: 0.55rem 1rem; min-height: 40px; }
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────── */
 .overlay-panel::-webkit-scrollbar       { width: 3px; }
 .overlay-panel::-webkit-scrollbar-track { background: transparent; }
 .overlay-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
+
+/* ── Mobile / touch responsive ────────────────────────────── */
+@media (max-width: 640px) {
+  /* Header — stack hint above username/signout */
+  #header {
+    padding: 0.6rem 1rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+  }
+  .hint { font-size: 0.58rem; letter-spacing: 0.1em; }
+
+  /* Larger tap targets for overlay buttons */
+  .overlay-close {
+    padding: 0.55rem 1rem;
+    min-height: 38px;
+    min-width: 38px;
+  }
+  .overlay-link {
+    padding: 0.65rem 1.2rem;
+    min-height: 42px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .carousel-btn {
+    width: 2.8rem;
+    height: 2.8rem;
+  }
+
+  /* Overlay panel — less padding on small screens */
+  .overlay-panel {
+    padding: 1.6rem 1.2rem;
+    max-height: 90vh;
+  }
+
+  /* Lore panel — anchor to bottom on mobile instead of right side */
+  #lore-panel {
+    top: auto;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    width: 100%;
+    max-width: 100%;
+    max-height: 55vh;
+    border-radius: 8px 8px 0 0;
+    border-right: 1px solid rgba(255,255,255,0.08);
+    border-bottom: none;
+    transform: translateY(110%) !important;
+  }
+  #lore-panel::before {
+    top: 0; left: 0; right: 0; bottom: auto;
+    width: auto;
+    height: 2px;
+    border-radius: 8px 8px 0 0;
+  }
+  #lore-panel.visible {
+    transform: translateY(0) !important;
+  }
+}

@@ -215,7 +215,7 @@ export function buildPhoneBooth(proj) {
   // ─ Sign panel (inside booth, facing front) ─
   const signMesh = new THREE.Mesh(
     new THREE.PlaneGeometry(0.65, 0.82),
-    new THREE.MeshBasicMaterial({ map: makeSignTexture(), transparent: true })
+    new THREE.MeshBasicMaterial({ map: makeSignTexture() })
   );
   signMesh.position.set(0, 0.15, D / 2 - FT - 0.01);
   group.add(signMesh);
@@ -240,10 +240,6 @@ export function buildPhoneBooth(proj) {
   hook.position.set(-0.38, 0.08, D / 2 - FT - 0.06);
   group.add(hook);
 
-  // ─ Interior warm light ─
-  const light = new THREE.PointLight(0xffaa44, 1.2, 2.5);
-  light.position.set(0, 0, 0);
-  group.add(light);
 
   // ─ Click target — large invisible plane covering front face ─
   const clickPlane = new THREE.Mesh(
@@ -253,27 +249,21 @@ export function buildPhoneBooth(proj) {
   clickPlane.position.set(0, 0, D / 2 + 0.01);
   group.add(clickPlane);
 
-  // ─ Glow halo — matches the sign panel size so it doesn't bleed outside
-  //   the enquiries box. Positioned just in front of the sign.
-  const glowPlane = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.60, 0.76),
-    new THREE.MeshBasicMaterial({
-      color: new THREE.Color(proj.glowColor),
-      transparent: true, opacity: 0.07,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-    })
+  // Invisible sentinel — never added to the scene, exists only so the hover
+  // system in input.js can call gsap.to(glowMesh.material, { opacity }) without
+  // crashing. The phone booth uses no external glow plane because additive-
+  // blended transparent planes bleed through the glass walls from any angle.
+  // Hover feedback comes from the group scale animation (1.05×) alone.
+  const glowSentinel = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.01, 0.01),
+    new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, visible: false })
   );
-  glowPlane.position.set(0, 0.15, D / 2 + 0.02);
-  group.add(glowPlane);
 
   // ─ userData wiring ─
-  // panelMesh must be a visible, fadeable mesh so camera.js can dim the booth
-  // when zooming into another frame. signMesh (the canvas display) is the most
-  // prominent front-facing element. clickPlane stays invisible for raycasting.
   clickPlane.userData.frameGroup  = group;
   group.userData.panelMesh        = signMesh;
-  group.userData.glowMesh         = glowPlane;
+  group.userData.glowMesh         = glowSentinel; // sentinel only — not in scene
+  group.userData.glowBaseOpacity  = 0;
   group.userData.screenMesh       = clickPlane;
   group.userData.isPhoneBooth     = true;
   group.userData.proj             = proj;

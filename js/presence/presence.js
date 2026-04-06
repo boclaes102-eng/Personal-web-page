@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * presence.js
  * Live visitor presence via Supabase Realtime.
@@ -30,6 +31,11 @@ let _hud      = null;
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
+/**
+ * Connect to the Realtime presence channel and start broadcasting.
+ * Must be called once after the user successfully signs in.
+ * @param {{ id: string, email?: string, user_metadata?: { username?: string } }} user
+ */
 export function initPresence(user) {
   _username = (user?.user_metadata?.username ?? user?.email ?? 'VISITOR').toUpperCase();
   _hud = document.getElementById('presence-hud');
@@ -42,11 +48,17 @@ export function initPresence(user) {
   _connect(user.id);
 }
 
+/**
+ * Update the current user's room in the presence channel.
+ * @param {keyof typeof ROOM_LABELS} room
+ */
 export function setPresenceRoom(room) {
   _room = room;
-  _channel?.track({ username: _username, room });
+  _channel?.track({ username: _username, room })
+    .catch(() => {});
 }
 
+/** Unsubscribe from the presence channel. Call on sign-out. */
 export function destroyPresence() {
   if (_channel) {
     _channel.unsubscribe();
@@ -67,9 +79,9 @@ function _connect(userId) {
   });
 
   _channel
-    .on('presence', { event: 'sync' },  () => _render(_channel.presenceState()))
-    .on('presence', { event: 'join' },  () => _render(_channel.presenceState()))
-    .on('presence', { event: 'leave' }, () => _render(_channel.presenceState()));
+    .on('presence', { event: 'sync' },  () => { _render(_channel.presenceState()); })
+    .on('presence', { event: 'join' },  () => { _render(_channel.presenceState()); })
+    .on('presence', { event: 'leave' }, () => { _render(_channel.presenceState()); });
 
   _channel.subscribe(async status => {
     if (status === 'SUBSCRIBED') {
@@ -84,7 +96,7 @@ function _render(state) {
   if (!_hud) return;
 
   // state is { [key]: [{ username, room, presence_ref }] }
-  const users = Object.values(state).map(arr => arr[0]).filter(Boolean);
+  const users = Object.values(state).map(arr => arr[arr.length - 1]).filter(Boolean);
   const count = users.length;
 
   const counter = _hud.querySelector('.pr-counter');
@@ -93,7 +105,7 @@ function _render(state) {
 
   counter.textContent = `● ${count} ONLINE`;
 
-  list.innerHTML = '';
+  list.replaceChildren();
   // Sort: current user first, then alphabetically
   users
     .slice()

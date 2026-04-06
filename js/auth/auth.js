@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * auth.js
  * Supabase Auth client — sign-up, sign-in, sign-out, password reset,
@@ -30,9 +31,15 @@
 
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
 
+/**
+ * @typedef {{ access_token: string, refresh_token: string, expires_at: number, user: object }} Session
+ * @typedef {{ type: string, access_token: string, refresh_token: string|null }} HashTokens
+ */
+
 const SESSION_KEY = 'ds_auth_v1';   // localStorage key for persisting the session
 
-let _session = null;   // { access_token, refresh_token, expires_at, user }
+/** @type {Session|null} */
+let _session = null;
 
 // ── Internal ──────────────────────────────────────────────────────────────────
 
@@ -78,6 +85,10 @@ async function _refreshSession(refreshToken) {
 }
 
 // ── Public: restore an existing session on page load ──────────────────────────
+/**
+ * Restore a saved session from localStorage, silently refreshing if near expiry.
+ * @returns {Promise<object|null>} The user object, or null if not authenticated.
+ */
 export async function checkSession() {
   try {
     const raw = localStorage.getItem(SESSION_KEY);
@@ -101,6 +112,14 @@ export async function checkSession() {
 }
 
 // ── Public: sign up ───────────────────────────────────────────────────────────
+/**
+ * Register a new user. Returns a Supabase auth response.
+ * If email confirmation is required, `data.session` will be null.
+ * @param {string} username
+ * @param {string} email
+ * @param {string} password
+ * @returns {Promise<object>}
+ */
 export async function signUp(username, email, password) {
   const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
     method:  'POST',
@@ -121,6 +140,12 @@ export async function signUp(username, email, password) {
 }
 
 // ── Public: sign in ───────────────────────────────────────────────────────────
+/**
+ * Sign in with email and password.
+ * @param {string} email
+ * @param {string} password
+ * @returns {Promise<object>} Session data including `access_token` and `user`.
+ */
 export async function signIn(email, password) {
   const res = await fetch(
     `${SUPABASE_URL}/auth/v1/token?grant_type=password`,
@@ -146,6 +171,10 @@ export async function signOut() {
 }
 
 // ── Public: send a password-reset email ───────────────────────────────────────
+/**
+ * Send a password-reset email to the given address.
+ * @param {string} email
+ */
 export async function resetPassword(email) {
   const res = await fetch(`${SUPABASE_URL}/auth/v1/recover`, {
     method:  'POST',
@@ -159,6 +188,12 @@ export async function resetPassword(email) {
 }
 
 // ── Public: set a new password (called with the recovery access token) ────────
+/**
+ * Set a new password using the recovery token from the email link.
+ * @param {string} recoveryToken  The `access_token` from the recovery URL hash.
+ * @param {string} newPassword
+ * @returns {Promise<object>}
+ */
 export async function updatePassword(recoveryToken, newPassword) {
   const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
     method:  'PUT',
@@ -173,13 +208,19 @@ export async function updatePassword(recoveryToken, newPassword) {
 }
 
 // ── Public: current session getters ──────────────────────────────────────────
+/** @returns {object|null} The currently signed-in user, or null. */
 export function getCurrentUser()  { return _session?.user  ?? null; }
+/** @returns {string|null} The current JWT access token, or null if not signed in. */
 export function getAccessToken()  { return _session?.access_token ?? null; }
 
 // ── Public: music theme preference ───────────────────────────────────────────
 // Uses the user_preferences table (see SQL setup in auth.js header comment).
 // Both functions are fire-and-forget safe — they fail silently.
 
+/**
+ * Persist the user's music theme choice to the database (fire-and-forget).
+ * @param {string} theme
+ */
 export async function saveUserTheme(theme) {
   const token = getAccessToken();
   const uid   = getCurrentUser()?.id;
@@ -195,6 +236,7 @@ export async function saveUserTheme(theme) {
   }).catch(() => {});
 }
 
+/** @returns {Promise<string|null>} The saved theme name, or null if not set. */
 export async function loadUserTheme() {
   const token = getAccessToken();
   const uid   = getCurrentUser()?.id;
@@ -234,10 +276,11 @@ export async function deleteJukeboxFile(url) {
 }
 
 /**
- * Upload an MP3 to slot 1-3 in Supabase Storage. Returns the public URL.
+ * Upload an audio file to a Supabase Storage slot (1-3). Returns the public URL.
  * @param {File}   file
- * @param {number} slot  1-3
- * @param {string} [title] sanitized title to embed in the path for persistence
+ * @param {number} [slot=1]  Storage slot 1-3.
+ * @param {string} [title=''] Sanitised name used in the storage path for readability.
+ * @returns {Promise<string>} Public URL of the uploaded file.
  */
 export async function uploadJukeboxTrack(file, slot = 1, title = '') {
   const token = getAccessToken();
@@ -306,7 +349,10 @@ export async function deleteCustomTrack(url, slot = 1) {
   }).catch(() => {});
 }
 
-/** Load all 3 custom track URLs. Returns an array [url1, url2, url3] (null where empty). */
+/**
+ * Load all three custom track URLs from the database.
+ * @returns {Promise<Array<string|null>>} [url1, url2, url3] — null where no upload exists.
+ */
 export async function loadAllCustomTrackUrls() {
   const token = getAccessToken();
   const uid   = getCurrentUser()?.id;
@@ -332,6 +378,11 @@ export async function loadAllCustomTrackUrls() {
 // ── Public: parse recovery / email-confirm tokens from the URL hash ───────────
 // Supabase appends  #access_token=...&type=recovery  (or type=signup) to the
 // redirect URL after the user clicks a link in their email.
+/**
+ * Parse Supabase callback tokens from the URL hash after email link redirects.
+ * Strips the tokens from the address bar once read.
+ * @returns {HashTokens|null}
+ */
 export function parseHashTokens() {
   if (!window.location.hash || window.location.hash.length < 2) return null;
   try {

@@ -23,7 +23,7 @@ export const PROJECTS = [
     description:
       "A retro 1970s television floating in space. Tune through channels — breaking news, weather forecast, live market data, sports scores, and a broadcast test signal.",
     tech: ["JavaScript", "Canvas API", "CSS", "HTML"],
-    glowColor: "#88aaff",     // phosphor blue-white
+    glowColor: "#282320",     // matches TV body colour
     media: [],
     link: "#"
   },
