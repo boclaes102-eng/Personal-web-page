@@ -1,10 +1,11 @@
 /**
  * config.example.js — template for config.js
  *
- * Copy this file to js/config.js and fill in your Supabase project values.
- * config.js is gitignored and will never be committed.
+ * Copy this file to js/config.js and fill in your own values.
+ * config.js is committed to git so Netlify can deploy it.
  *
- * Find these values in: Supabase dashboard → Settings → API
+ * Supabase values: dashboard → Settings → API
+ * Groq key:        console.groq.com (free tier)
  */
 
 export const SUPABASE_URL      = 'https://your-project.supabase.co';

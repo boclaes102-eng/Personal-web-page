@@ -1,17 +1,13 @@
 /**
  * tools/aichat.js
  * ARIA — AI terminal chat powered by Groq (Llama 3.1 8B Instant).
- * Streams the response from Groq via the groq-proxy Supabase Edge Function,
- * then types it out character-by-character with pc-type sound effects.
- *
- * The Groq API key never reaches the browser — it lives as a server-side
- * Supabase secret and is only used inside the Edge Function.
+ * Streams the response from Groq, then types it out character-by-character
+ * with pc-type sound effects.
  *
  * Export: startTool(container)
  */
 
-import { SUPABASE_URL }   from '../../config.js';
-import { getAccessToken } from '../../auth/auth.js';
+import { GROQ_API_KEY } from '../../config.js';
 import { sfx }            from '../../audio/audio-manager.js';
 
 const MODEL         = 'llama-3.1-8b-instant';
@@ -38,10 +34,10 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 // ── Tool entry point ──────────────────────────────────────────────────────────
 
 export function startTool(container) {
-  if (!SUPABASE_URL) {
+  if (!GROQ_API_KEY) {
     const warn = el('div', 'pc-tool-warn');
     warn.style.cssText = 'padding:1rem;white-space:pre;';
-    warn.textContent = '  ✗  SUPABASE_URL not configured in js/config.js';
+    warn.textContent = '  ✗  GROQ_API_KEY not configured in js/config.js';
     container.appendChild(warn);
     return;
   }
@@ -139,13 +135,11 @@ export function startTool(container) {
   // ─ Fetch full response from Groq (streaming under the hood) ──────────────
 
   async function fetchResponse(messages) {
-    const token = getAccessToken();
-    if (!token) throw new Error('Not signed in');
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/groq-proxy`, {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method:  'POST',
       headers: {
         'Content-Type':  'application/json',
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${GROQ_API_KEY}`,
       },
       body: JSON.stringify({
         model:    MODEL,

@@ -264,64 +264,17 @@ export function startTool(container) {
       });
     }
 
-    // 2. Reputation API call (emailrep.io)
+    // 2. Reputation section — emailrep.io is a server-side-only API (no CORS headers),
+    //    so we skip the fetch entirely and point the user to check manually.
     if (local.valid) {
       const repSec = section(output, 'REPUTATION  CHECK  (emailrep.io)');
-      const loadEl = el('div', 'pc-tool-dim', '  Contacting emailrep.io…');
-      repSec.appendChild(loadEl);
-
-      try {
-        const res = await fetch(`https://emailrep.io/${encodeURIComponent(email)}`, {
-          headers: { 'User-Agent': 'secureos-mailspy/1.0' },
-        });
-
-        if (res.status === 429) throw new Error('Rate limit reached (10 free lookups/day)');
-        if (!res.ok)            throw new Error(`HTTP ${res.status}`);
-
-        const d = await res.json();
-        loadEl.remove();
-
-        const repClsMap = { high: 'pc-tool-success', medium: 'pc-tool-warn', low: 'pc-tool-danger', none: 'pc-tool-danger' };
-        kv(repSec, 'Reputation',    (d.reputation || 'unknown').toUpperCase(), repClsMap[d.reputation] || 'pc-tool-dim');
-        kv(repSec, 'Suspicious',    d.suspicious ? '⚠ YES' : '✓ No',         d.suspicious ? 'pc-tool-danger' : 'pc-tool-success');
-
-        const det = d.details || {};
-        kv(repSec, 'Credentials leaked', det.credentials_leaked        ? '⚠ YES — found in breach data'    : '✓ Not found',
-           det.credentials_leaked ? 'pc-tool-danger' : 'pc-tool-success');
-        kv(repSec, 'Recent leak',        det.credentials_leaked_recent ? '⚠ Leaked within last year'       : '✓ No recent leak',
-           det.credentials_leaked_recent ? 'pc-tool-danger' : 'pc-tool-success');
-        kv(repSec, 'Data breach',        det.data_breach               ? '⚠ Known breach association'      : '✓ No known breach',
-           det.data_breach ? 'pc-tool-warn' : 'pc-tool-success');
-        kv(repSec, 'Spam activity',      det.spam                      ? '⚠ Associated with spam'          : '✓ No spam flag',
-           det.spam ? 'pc-tool-warn' : 'pc-tool-success');
-        kv(repSec, 'Malicious activity', det.malicious_activity        ? '⚠ Malicious activity detected'   : '✓ None detected',
-           det.malicious_activity ? 'pc-tool-danger' : 'pc-tool-success');
-        kv(repSec, 'Free provider',      det.free_provider             ? 'Yes'                             : 'No');
-        kv(repSec, 'Deliverable',        det.deliverable               ? '✓ Yes'                           : '✗ May bounce');
-        if (det.last_seen) kv(repSec, 'Last seen online', det.last_seen);
-        if (d.references)  kv(repSec, 'References',       `${d.references} data points`);
-
-        // Recommendations
-        if (d.suspicious || det.credentials_leaked || det.malicious_activity) {
-          const alert = el('div', 'pc-tool-danger');
-          alert.style.cssText = 'margin-top:0.5rem;padding:0.3rem;border:1px solid rgba(247,90,90,0.3);font-size:0.8em;';
-          alert.textContent = '  ⚠ ACTION REQUIRED: Change passwords on accounts using this email. Enable 2FA. Check haveibeenpwned.com for full breach list.';
-          repSec.appendChild(alert);
-        } else {
-          const ok = el('div', 'pc-tool-success');
-          ok.style.cssText = 'margin-top:0.4rem;font-size:0.78em;';
-          ok.textContent = '  ✓ No immediate red flags — still recommended to check haveibeenpwned.com periodically.';
-          repSec.appendChild(ok);
-        }
-
-      } catch (err) {
-        loadEl.className = 'pc-tool-warn';
-        loadEl.textContent = `  ✗ Reputation check failed: ${err.message}`;
-        const fallback = el('div', 'pc-tool-dim');
-        fallback.style.cssText = 'font-size:0.75em;margin-top:0.25rem;';
-        fallback.textContent = '  Check manually at: haveibeenpwned.com';
-        repSec.appendChild(fallback);
-      }
+      const note = el('div', 'pc-tool-warn');
+      note.textContent = '  ✗ Not available from browser — emailrep.io blocks cross-origin requests';
+      repSec.appendChild(note);
+      const fallback = el('div', 'pc-tool-dim');
+      fallback.style.cssText = 'font-size:0.75em;margin-top:0.25rem;';
+      fallback.textContent = '  Check manually at: emailrep.io  ·  haveibeenpwned.com';
+      repSec.appendChild(fallback);
     }
 
     // 3. Static info (always render)

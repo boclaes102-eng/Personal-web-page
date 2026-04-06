@@ -14,9 +14,9 @@ yarn-error.log*
 .env.local
 .env.*.local
 
-# config.js only contains the Supabase URL and anon key — both are intentionally
-# public (the anon key is designed for browser use; security comes from RLS policies).
-# The Groq key and service_role key are never stored here — they live in Supabase secrets.
+# config.js is intentionally committed — it contains the Supabase anon key (public by
+# design, secured by RLS) and the Groq API key (free-tier, usage-capped). Netlify needs
+# this file to deploy the site. Never store a service_role key here.
 
 # OS
 .DS_Store
@@ -33,6 +33,9 @@ desktop.ini
 dist/
 build/
 out/
+
+# Old video file — replaced by news.mp4
+videoplayback.mp4
 
 # Logs
 *.log

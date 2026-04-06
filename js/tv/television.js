@@ -18,7 +18,7 @@ const SCR_W = 1.28, SCR_H = 0.96;
 const SCR_Y = 0.16;  // offset above group centre to leave room for knobs below
 const SCR_Z = TV_D / 2 + 0.01; // just in front of the body's front face
 
-// ── Video texture (plays videoplayback.mp4 on the TV screen) ─────────────────
+// ── Video texture (plays news.mp4 on the TV screen, loops automatically) ─────
 let _videoEl  = null;
 let _videoTex = null;
 
