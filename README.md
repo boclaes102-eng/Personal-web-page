@@ -8,7 +8,7 @@ The world is a floating space station where everything is an interactive object:
 
 ## Live Demo
 
-**[boclaes102.netlify.app](https://boclaes102.netlify.app)**
+**[thedeepspaceproject.be](https://thedeepspaceproject.be)**
 
 ---
 
