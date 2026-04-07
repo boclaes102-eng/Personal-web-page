@@ -243,7 +243,7 @@ function profileBlock() {
 function experienceBlock() {
   const jobs = [
     {
-      company: 'Brandweer Leuven',
+      company: 'Fire Station Leuven',
       role:    'Cybersecurity Consultant — Independent Engagement',
       period:  '2026 · 3 months',
       bullets: [
