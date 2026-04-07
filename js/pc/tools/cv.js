@@ -229,13 +229,13 @@ function profileBlock() {
 <div style="margin-bottom:26px;">
   ${sectionTitle('PROFILE')}
   <p style="opacity:.8;line-height:1.8;margin:0;">
-    Full Stack Developer, IoT Engineer, and aspiring Cybersecurity Analyst with hands-on experience
-    across the complete software and hardware lifecycle. Combines deep development expertise with
-    sensor-driven automation — designing and deploying Raspberry Pi systems, custom sensor arrays,
-    and embedded firmware from the ground up. Equally at home hardening network infrastructure,
-    auditing Active Directory environments, and building resilient full-stack web applications.
-    Passionate about bridging the physical and digital: turning raw sensor data into intelligent,
-    automated systems.
+    Full Stack Developer, IoT Engineer, and Cybersecurity Analyst with hands-on experience building
+    complete systems from the ground up. At an early-stage startup, acted as sole engineer responsible
+    for an entire AI-powered sports analytics platform — from physical camera installation through
+    computer vision pipelines to the coaching dashboard. Builds sensor-driven automation with
+    Raspberry Pi and embedded hardware, architects cloud infrastructure, and conducts real-world
+    penetration tests on live production environments. Currently completing a Cybersecurity Analyst
+    &amp; Engineer programme alongside active professional work.
   </p>
 </div>`;
 }
@@ -243,13 +243,14 @@ function profileBlock() {
 function experienceBlock() {
   const jobs = [
     {
-      company: 'Cybersecurity Research &amp; Practice',
-      role:    'Security Analyst — Independent &amp; Syntra Applied Projects',
-      period:  '2025 — Present',
+      company: 'Brandweer Leuven',
+      role:    'Cybersecurity Consultant — Independent Engagement',
+      period:  '2025 · 3 months',
       bullets: [
-        'Conducted vulnerability assessments on Windows and Linux server environments using OpenVAS and Nessus, producing detailed remediation reports with risk scoring and prioritised action plans.',
-        'Performed Active Directory audits — identifying misconfigurations, privilege escalation paths, and stale account risks; implemented Group Policy hardening recommendations.',
-        'Competed in multiple Capture The Flag (CTF) competitions, gaining hands-on experience in web exploitation, reverse engineering, and cryptographic challenges.',
+        'Independently arranged and executed a 3-month security assessment of a public safety facility — scanning the full network with OpenVAS and Nessus, delivering detailed remediation reports with risk scoring across Windows and Linux environments.',
+        'Performed a full Active Directory audit — uncovering misconfigurations, privilege escalation paths, and stale account risks; produced a prioritised hardening report with Group Policy recommendations.',
+        'Conducted an authorised penetration test, successfully breaching the facility network and identifying critical weaknesses in the firewall configuration.',
+        'Implemented firewall hardening measures based on findings and validated fixes through follow-up testing.',
       ],
     },
     {
@@ -257,9 +258,10 @@ function experienceBlock() {
       role:    'Fullstack Developer &amp; Software/Hardware Engineer',
       period:  '2024 — 2025',
       bullets: [
-        'Architected and delivered full-stack feature expansions for mission-critical client software, improving performance and UX across production environments.',
-        'Designed and assembled custom embedded hardware solutions including PCB soldering and low-level firmware integration.',
-        'Led end-to-end webshop development and digital marketing strategy, driving measurable growth in online presence.',
+        'Designed and built an offline Three.js application for drone fleet management — featuring a custom spatial anchor system, real-time GPS coordinate tracking, and automated optimal landing point selection for connected drones.',
+        'Rebuilt the company website with an SEO-first approach and implemented a full analytics pipeline (click tracking, session flow, exit-rate analysis) — driving a ~30% increase in sales.',
+        'Architected and delivered full-stack feature expansions for mission-critical client software across multiple production environments.',
+        'Assembled custom embedded hardware including PCB soldering and board-level improvements for drone systems.',
       ],
     },
     {
@@ -267,18 +269,19 @@ function experienceBlock() {
       role:    'Lecturer — Programming &amp; IoT',
       period:  '2023 — 2024',
       bullets: [
-        'Independently designed and delivered a full curriculum in introductory programming and IoT fundamentals to bachelor-level students.',
-        'Mentored project teams and evaluated coursework, guiding students from concept to working prototype.',
+        'Independently designed and delivered a full programming and IoT curriculum to bachelor-level students — introducing AWS cloud infrastructure and Node-RED automation as core course tools.',
+        'Mentored student project teams from concept to working prototype, evaluating technical deliverables and guiding hands-on hardware builds.',
       ],
     },
     {
       company: 'MyPitch',
-      role:    'Cloud Architect',
+      role:    'Software &amp; Infrastructure Engineer',
       period:  '2022',
       bullets: [
-        'Engineered an automated AWS-based video transcoding and cloud storage pipeline, significantly reducing content management overhead.',
-        'Developed tooling for AI-assisted media quality enhancement across image and video processing workflows.',
-        'Coordinated on-site hardware installation and infrastructure setup.',
+        'Sole engineer for an AI-powered soccer analytics platform at an early-stage startup — responsible for the entire system from hardware to application.',
+        'Installed and configured AI-enabled cameras at soccer facilities; built a fully automated pipeline routing footage to AWS S3 via an SQS queue that triggered a custom Linux VM when capacity was available.',
+        'Wrote Python video analysis code using OpenCV, later evolving the system to a pre-trained ML model for improved player detection — extracting per-player performance metrics by jersey number from every match.',
+        'Data was stored back to S3 and consumed by a coaching app, giving coaching staff a full breakdown of each player\'s performance per match.',
       ],
     },
   ];
