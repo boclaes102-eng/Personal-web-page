@@ -245,7 +245,7 @@ function experienceBlock() {
     {
       company: 'Brandweer Leuven',
       role:    'Cybersecurity Consultant — Independent Engagement',
-      period:  '2025 · 3 months',
+      period:  '2026 · 3 months',
       bullets: [
         'Independently arranged and executed a 3-month security assessment of a public safety facility — scanning the full network with OpenVAS and Nessus, delivering detailed remediation reports with risk scoring across Windows and Linux environments.',
         'Performed a full Active Directory audit — uncovering misconfigurations, privilege escalation paths, and stale account risks; produced a prioritised hardening report with Group Policy recommendations.',
