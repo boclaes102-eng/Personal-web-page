@@ -175,12 +175,12 @@ function languagesBlock() {
 
 function skillsBlock() {
   const groups = [
-    { label: 'CLOUD & INFRA',  items: ['AWS', 'Azure', 'Linux', 'Git'] },
+    { label: 'CLOUD & INFRA',  items: ['AWS', 'Linux', 'Git'] },
     { label: 'BACKEND',        items: ['PHP', 'Python', 'C#', 'SQL', 'Supabase'] },
     { label: 'FRONTEND',       items: ['JavaScript', 'HTML/CSS', 'Three.js'] },
-    { label: 'CYBERSECURITY',  items: ['Firewall Management', 'Blue Team', 'Red Team', 'AD Audit', 'OpenVAS', 'Nessus', 'Burp Suite', 'Metasploit', 'SIEM', 'Incident Response', 'OWASP', 'CTF'] },
+    { label: 'CYBERSECURITY',  items: ['Firewall Management', 'AD Audit', 'OpenVAS', 'Nessus', 'Burp Suite', 'Metasploit', 'SIEM', 'OWASP', 'CTF'] },
     { label: 'NETWORK',        items: ['IDS/IPS', 'VPN', 'Network Segmentation', 'Wireshark', 'Nmap'] },
-    { label: 'HARDWARE / IOT', items: ['PCB Design', 'Soldering', 'Firmware', 'Arduino'] },
+    { label: 'HARDWARE / IOT', items: ['PCB Design', 'Soldering', 'Firmware', 'Arduino', 'Raspberry Pi', 'Sensors'] },
   ];
   return `
 <div>
@@ -231,9 +231,11 @@ function profileBlock() {
   <p style="opacity:.8;line-height:1.8;margin:0;">
     Full Stack Developer, IoT Engineer, and aspiring Cybersecurity Analyst with hands-on experience
     across the complete software and hardware lifecycle. Combines deep development expertise with
-    applied offensive and defensive security skills — including vulnerability assessment, firewall
-    management, Active Directory auditing, and red/blue team exercises. Passionate about building
-    secure, resilient systems and uncovering weaknesses before adversaries do.
+    sensor-driven automation — designing and deploying Raspberry Pi systems, custom sensor arrays,
+    and embedded firmware from the ground up. Equally at home hardening network infrastructure,
+    auditing Active Directory environments, and building resilient full-stack web applications.
+    Passionate about bridging the physical and digital: turning raw sensor data into intelligent,
+    automated systems.
   </p>
 </div>`;
 }
@@ -247,8 +249,6 @@ function experienceBlock() {
       bullets: [
         'Conducted vulnerability assessments on Windows and Linux server environments using OpenVAS and Nessus, producing detailed remediation reports with risk scoring and prioritised action plans.',
         'Performed Active Directory audits — identifying misconfigurations, privilege escalation paths, and stale account risks; implemented Group Policy hardening recommendations.',
-        'Executed blue team exercises: configured and tuned firewall rulesets, deployed IDS/IPS monitoring, analysed SIEM logs, and led incident response simulations under realistic threat scenarios.',
-        'Participated in red team engagements: internal network reconnaissance, exploitation with Metasploit and Burp Suite, lateral movement mapping, and post-engagement reporting.',
         'Competed in multiple Capture The Flag (CTF) competitions, gaining hands-on experience in web exploitation, reverse engineering, and cryptographic challenges.',
       ],
     },
