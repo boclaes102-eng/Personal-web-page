@@ -1,8 +1,12 @@
 # Deep Space — Interactive 3D Portfolio
 
+*A Three.js space scene where every floating object is a real, working application.*
+
+![Deep Space Project Preview](preview.jpg)
+
 A fully interactive 3D portfolio built from scratch with vanilla JavaScript and Three.js. No framework, no bundler, no build step — just ES modules running directly in the browser.
 
-The world is a floating space station where everything is an interactive object: a retro PC, a TV with live news feeds, an arcade cabinet with multiplayer gaming, a jukebox, and a British phone booth — each one a fully functional application.
+The world is a rotating space environment where everything is an interactive object: a retro PC, a TV with live news feeds, an arcade cabinet with multiplayer gaming, a jukebox, and a British phone booth — each one a fully functional application.
 
 ---
 
@@ -284,3 +288,9 @@ npm test
 | ESPN | Sports scores |
 | NASA EONET | Natural disaster events |
 | Have I Been Pwned | Password breach check |
+
+---
+
+## License
+
+MIT © Bo Claes

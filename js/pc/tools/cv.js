@@ -220,6 +220,7 @@ function buildRight() {
     ${profileBlock()}
     ${experienceBlock()}
     ${educationBlock()}
+    ${projectsBlock()}
     <div style="margin-top:28px;opacity:.2;font-size:9px;letter-spacing:3px;text-align:right;">── END OF FILE ──</div>
   `;
 }
@@ -298,6 +299,49 @@ function experienceBlock() {
     <div style="font-size:10px;opacity:.55;letter-spacing:.5px;margin-bottom:7px;">${j.role}</div>
     <ul style="margin:0;padding-left:16px;opacity:.8;line-height:1.7;">
       ${j.bullets.map(b => `<li style="margin-bottom:2px;">${b}</li>`).join('')}
+    </ul>
+  </div>`).join('')}
+</div>`;
+}
+
+function projectsBlock() {
+  const projects = [
+    {
+      name:   'The Deep Space Project',
+      url:    'thedeepspaceproject.be',
+      period: '2025 — Present',
+      tags:   ['Three.js', 'JavaScript', 'Supabase', 'Web Audio API', 'Groq AI', 'GLSL'],
+      bullets: [
+        'Built a fully interactive 3D portfolio environment from scratch in Three.js — a rotating space scene with dynamic lighting, custom GLSL shaders, and interactive objects placed across the environment.',
+        'Working in-world PC with real tools: SHA-1 k-anonymity password breach checker (HIBP API), JWT decoder, network scanner, mailspy, and this CV viewer.',
+        'Multiplayer Pong over Supabase Realtime with authoritative host physics, lerp interpolation for the guest, and synchronised sound effects via dedicated broadcast events.',
+        'Jukebox system with Supabase cloud storage — users can upload and stream their own tracks from within the 3D world.',
+        'Full authentication system (sign up / log in / auto-session) and an AI chat terminal powered by the Groq API.',
+      ],
+    },
+  ];
+
+  return `
+<div style="margin-top:28px;margin-bottom:26px;">
+  ${sectionTitle('PROJECTS')}
+  ${projects.map(p => `
+  <div style="margin-bottom:22px;">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px;margin-bottom:2px;">
+      <span style="font-weight:bold;text-shadow:0 0 8px #0f3;">${p.name}</span>
+      <span style="font-size:9px;letter-spacing:1px;opacity:.4;">${p.period}</span>
+    </div>
+    <div style="font-size:10px;opacity:.5;margin-bottom:6px;">${p.url}</div>
+    <div style="margin-bottom:7px;">
+      ${p.tags.map(t => `<span style="
+        display:inline-block;margin:2px 3px 2px 0;
+        padding:1px 6px;
+        border:1px solid rgba(0,255,51,.2);
+        background:rgba(0,255,51,.03);
+        font-size:10px;opacity:.7;
+      ">${t}</span>`).join('')}
+    </div>
+    <ul style="margin:0;padding-left:16px;opacity:.8;line-height:1.7;">
+      ${p.bullets.map(b => `<li style="margin-bottom:2px;">${b}</li>`).join('')}
     </ul>
   </div>`).join('')}
 </div>`;
