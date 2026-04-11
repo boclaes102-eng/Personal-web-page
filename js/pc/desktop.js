@@ -395,6 +395,7 @@ function buildDOM() {
       _activeCatId = cat.id;
       catItems.forEach(ci => ci.classList.remove('active'));
       item.classList.add('active');
+      sfx('pc-enter-key');
       buildIconPanel(cat.id, iconPanel);
     });
 

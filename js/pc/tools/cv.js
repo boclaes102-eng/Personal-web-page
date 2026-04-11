@@ -319,6 +319,61 @@ function projectsBlock() {
         'Full authentication system (sign up / log in / auto-session) and an AI chat terminal powered by the Groq API.',
       ],
     },
+    {
+      name:   'CyberSuite Pro',
+      url:    'github.com/boclaes102-eng/Cybersecurity-software',
+      period: '2025 — Present',
+      tags:   ['Python', 'CustomTkinter', 'Scapy', 'YARA', 'HIBP', 'PyInstaller', 'pytest'],
+      bullets: [
+        'Unified dark-themed security platform integrating three professional tools: a Network Intrusion Detection System, Password Auditing Suite, and Static Malware Analyzer.',
+        'NIDS performs real-time packet capture and detects six attack types including port scans and SYN floods; supports live interface capture and PCAP replay.',
+        'Static Malware Analyzer maps findings to 18 MITRE ATT&CK behavioural rules, runs YARA scanning, and integrates VirusTotal lookups — without executing the binary.',
+        'Tools run as in-process modules via importlib, with a custom threading.local() stdout interceptor capturing output from all three without modifying their source.',
+        '147 pytest tests covering thread management and all argument-building modes; ships as a portable standalone executable via PyInstaller.',
+      ],
+    },
+    {
+      name:   'Real-Time Data Pipeline',
+      url:    'github.com/boclaes102-eng/Real-time-data-pipeline',
+      period: '2025',
+      tags:   ['Python', 'FastAPI', 'asyncio', 'WebSockets', 'SQLite', 'Chart.js', 'Kafka'],
+      bullets: [
+        'Production-style streaming pipeline ingesting live stock, crypto, and Reddit sentiment data through a Kafka-inspired async message broker built on asyncio.Queue.',
+        'Three concurrent async producers feed a consumer that routes, transforms, and persists to SQLite — then broadcasts via WebSocket to a live Chart.js dashboard.',
+        'Broker abstraction is intentionally thin: swapping asyncio.Queue for real Confluent Kafka requires changing only one file; all producer and consumer code stays untouched.',
+        'Stocks fall back to Gaussian random-walk simulation outside NYSE trading hours, keeping the pipeline live 24/7.',
+      ],
+    },
+    {
+      name:   'Telecom Churn Predictor',
+      url:    'github.com/boclaes102-eng/Telecom-churn-predictor',
+      period: '2025',
+      tags:   ['Python', 'XGBoost', 'Streamlit', 'Scikit-learn', 'Pandas', 'Machine Learning'],
+      bullets: [
+        'XGBoost classification model trained on 7,043 customers and 20 features from IBM\'s public Telco dataset — achieving 0.84 ROC-AUC and 79.7% accuracy with cross-validation stability of ±0.010.',
+        'Streamlit interface accepts customer input and returns a live probability gauge with Low / Medium / High risk classification, primary churn risk factors, and a top-15 feature importance chart.',
+      ],
+    },
+    {
+      name:   'PyMind — AI Python Assistant',
+      url:    'github.com/boclaes102-eng/ML-python-tool',
+      period: '2025',
+      tags:   ['Python', 'Claude API', 'Anthropic', 'Tool Use', 'Prompt Caching', 'Agentic AI'],
+      bullets: [
+        'Agentic CLI assistant powered by Claude Sonnet with tool use, prompt caching, and multi-step reasoning loops — reads actual codebases, searches code, and runs snippets before responding.',
+        'Built on the Anthropic SDK with prompt caching to reduce latency and cost on repeated context; supports Windows and Linux path conventions transparently.',
+      ],
+    },
+    {
+      name:   'Sub-Checker',
+      url:    'github.com/boclaes102-eng/Sub-checker',
+      period: '2025',
+      tags:   ['Python', 'Gmail API', 'Google Cloud', 'OAuth2'],
+      bullets: [
+        'Scans 2 years of Gmail via Google\'s read-only API to detect and categorise recurring subscriptions into five statuses: active, likely active, inactive, cancelled, and one-time.',
+        'Fully local processing — no passwords stored, no data leaves the machine. Includes a setup wizard that automates Google Cloud configuration and OAuth credential setup end-to-end.',
+      ],
+    },
   ];
 
   return `
