@@ -12,4 +12,4 @@
 export const SUPABASE_URL      = 'https://iequlhfuqkqjaxxqsijd.supabase.co';
 export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImllcXVsaGZ1cWtxamF4eHFzaWpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2NDA4ODQsImV4cCI6MjA5MDIxNjg4NH0.4zP_KVcsMzoT3bon8tlC5GUKTRC9i3vohuCTtq-Htx8';
 
-export const GROQ_API_KEY = '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';
+export const GROQ_API_KEY = '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';
