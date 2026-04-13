@@ -333,6 +333,19 @@ function projectsBlock() {
       ],
     },
     {
+      name:   'CyberOps Dashboard',
+      url:    'github.com/boclaes102-eng/Online-Cyber-dashboard',
+      period: '2025 — Present',
+      tags:   ['Next.js 15', 'TypeScript', 'Tailwind CSS', 'Clerk', 'Vercel', 'OSINT'],
+      bullets: [
+        'Self-hosted cybersecurity operations platform with 50 specialised tools spanning reconnaissance, web security analysis, threat intelligence, and forensics — all behind Clerk authentication with edge-enforced rate limiting.',
+        'Threat intelligence layer integrates CVE search, hash scanning, exploit discovery, default credential lookups, and live feeds from Shodan, URLhaus, PhishTank, and ransomware tracking databases.',
+        'Implements MurmurHash3 for favicon fingerprinting and full CVSS v3.1 scoring logic entirely from scratch — no external libraries for either algorithm.',
+        'Workflow builder allows chaining reconnaissance and analysis steps with preset configurations for domain, IP, and web application targets.',
+        'Entire production runtime ships with only six packages; charts render via CSS, PDF export via browser print — zero heavy dependencies.',
+      ],
+    },
+    {
       name:   'Real-Time Data Pipeline',
       url:    'github.com/boclaes102-eng/Real-time-data-pipeline',
       period: '2025',
