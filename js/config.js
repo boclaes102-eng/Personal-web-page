@@ -15,5 +15,5 @@ export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 export const GROQ_API_KEY = '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';
 
 // SIEM integration — set these to your Railway backend URL and webhook secret
-export const SIEM_WEBHOOK_URL    = '';   // e.g. 'https://your-app.up.railway.app'
-export const SIEM_WEBHOOK_SECRET = '';   // must match SIEM_WEBHOOK_SECRET in Railway env vars
+export const SIEM_WEBHOOK_URL    = 'https://threat-intel-platform-production-eb1b.up.railway.app';
+export const SIEM_WEBHOOK_SECRET = '9f3c2a7d4b8e1c6f0a2d9e7b5c3f1a8e6d4c2b1a9f0e7d6c5b4a3f2e1d0c9b8';   // must match SIEM_WEBHOOK_SECRET in Railway env vars
