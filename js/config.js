@@ -13,3 +13,7 @@ export const SUPABASE_URL      = 'https://iequlhfuqkqjaxxqsijd.supabase.co';
 export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImllcXVsaGZ1cWtxamF4eHFzaWpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2NDA4ODQsImV4cCI6MjA5MDIxNjg4NH0.4zP_KVcsMzoT3bon8tlC5GUKTRC9i3vohuCTtq-Htx8';
 
 export const GROQ_API_KEY = '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';
+
+// SIEM integration — set these to your Railway backend URL and webhook secret
+export const SIEM_WEBHOOK_URL    = '';   // e.g. 'https://your-app.up.railway.app'
+export const SIEM_WEBHOOK_SECRET = '';   // must match SIEM_WEBHOOK_SECRET in Railway env vars

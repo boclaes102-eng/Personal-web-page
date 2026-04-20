@@ -30,6 +30,7 @@
  */
 
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
+import { siemEvent } from '../siem.js';
 
 /**
  * @typedef {{ access_token: string, refresh_token: string, expires_at: number, user: object }} Session
@@ -153,8 +154,10 @@ export async function signIn(email, password) {
   );
   const data = await res.json();
   if (!res.ok) {
+    siemEvent({ category: 'auth', action: 'login_failed', severity: 'medium', message: `Failed login for ${email}` });
     throw new Error(data.error_description ?? data.msg ?? data.error ?? 'Sign-in failed');
   }
+  siemEvent({ category: 'auth', action: 'login_success', severity: 'info', message: `Successful login for ${email}` });
   _saveSession(data);
   return data;
 }
