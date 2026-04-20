@@ -16,6 +16,7 @@ import { initPresence, destroyPresence } from './presence/presence.js';
 import { trackVisit }                   from './analytics/tracker.js';
 import { showAuthOverlay }                     from './auth/auth-ui.js';
 import { sfx }                                 from './audio/audio-manager.js';
+import { initSecurityMonitor }                 from './security-monitor.js';
 
 // ── Animation loop ────────────────────────────────────────────────────────────
 let lastT = 0;
@@ -144,6 +145,9 @@ function startWorld(user) {
 const _nudgeEl = document.getElementById('audio-nudge');
 
 async function bootstrap() {
+  // Start security monitoring immediately — scans URL, referrer, and hooks inputs
+  initSecurityMonitor();
+
   // Create AudioContext eagerly — for returning users whose browsers have learned
   // this site plays audio the context may auto-resume with no gesture needed.
   initAudio();
