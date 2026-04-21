@@ -274,6 +274,48 @@ npm test
 
 ---
 
+## Security Monitoring (SIEM Integration)
+
+The site runs a browser-side security monitor (`js/security-monitor.js`) that detects suspicious activity and reports it to the Threat Intel Platform SIEM via a webhook.
+
+### What is detected
+
+| Event | Action | Severity |
+|---|---|---|
+| XSS patterns in URL or form fields | `xss_attempt` | HIGH |
+| SQL injection patterns in URL or form fields | `sqli_attempt` | HIGH |
+| Prototype pollution in URL params (`__proto__`, `constructor`) | `prototype_pollution` | HIGH |
+| Suspicious path probes in URL (`.env`, `wp-admin`, `shell.php`, etc.) | `path_probe` | MEDIUM |
+| Failed login attempt | `login_failed` | MEDIUM |
+| Successful login | `login_success` | INFO |
+| Visit from scanner referrer (Shodan, Censys, Metasploit, etc.) | `suspicious_referrer` | MEDIUM |
+| 8+ form submissions in 30 seconds | `rapid_submission` | MEDIUM |
+| 5+ JavaScript errors in session | `js_error_spike` | LOW |
+| Suspicious unhandled promise rejection | `suspicious_js_error` | MEDIUM |
+
+### How it works
+
+All detection runs browser-side — no server needed. Events are sent fire-and-forget via `fetch` to the Railway webhook with an `X-Webhook-Secret` header. The backend stores them as `log_events` (with `userId: null`, `source: personal-website`) and the correlation worker raises incidents automatically.
+
+- **Brute force:** 5+ failed logins within 10 minutes → HIGH incident
+- **XSS / SQLi / prototype pollution:** single occurrence → HIGH incident immediately
+
+> **Limitation:** Path probe detection only fires when the user lands on an actual page of this site. Direct 404 hits (e.g. `/wp-admin`) return Netlify's 404 page before any JS loads, so they cannot be detected browser-side.
+
+### Pipeline
+
+```
+thedeepspaceproject.be (browser)
+  └─ security-monitor.js detects event
+  └─ siem.js → POST /webhook/site-events  (X-Webhook-Secret header)
+             → Railway API → log_events table
+             → Correlation worker (runs every 60s)
+             → incidents table
+             → CyberOps Dashboard — Event Timeline + Incidents
+```
+
+---
+
 ## APIs Used
 
 | API | Used For |
