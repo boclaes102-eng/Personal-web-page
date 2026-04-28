@@ -358,6 +358,19 @@ function projectsBlock() {
       ],
     },
     {
+      name:   'Job Scout',
+      url:    'github.com/boclaes102-eng/job-scout',
+      period: '2025 — Present',
+      tags:   ['Go', 'chi', 'goquery', 'SQLite', 'React', 'TypeScript', 'Vite', 'Tailwind CSS', 'Ollama'],
+      bullets: [
+        'Full-stack job scouting tool that scrapes LinkedIn and Adzuna Belgium in parallel using Go goroutines — 30 search queries from a profile.md pulled simultaneously across both sources with a balanced cap that distributes results proportionally per query category.',
+        'AI scoring via a local Ollama (llama3.1:8b) instance — reads each job description against your tech stack and experience, scores 0–100, and writes a 2–3 sentence explanation in the job\'s language (Dutch or English). No subscriptions, no API keys, fully offline.',
+        'Pipeline tab for application management: mark jobs as applied, generate a personalised cover email via Ollama that opens directly in Gmail compose, and permanently blacklist dismissed postings so they never reappear in future scrapes.',
+        'Date + radius + source filters (last 3 days / this week / this month, 10–100 km). In-app Profile Editor to update your CV, tech stack, and search queries without touching the file system.',
+        'Backend intentionally written in Go (not Node.js) to demonstrate range — goroutines handle 30 queries × 2 sources = 60 concurrent scrapers with zero callback hell. React + Vite frontend consumes a chi REST API with SSE for live scoring progress.',
+      ],
+    },
+    {
       name:   'Real-Time Data Pipeline',
       url:    'github.com/boclaes102-eng/Real-time-data-pipeline',
       period: '2025',
